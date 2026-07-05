@@ -98,7 +98,7 @@ export default function PaymentsPage() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Payments</h1>
@@ -113,8 +113,9 @@ export default function PaymentsPage() {
 
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3 mb-4">{error}</p>}
 
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
       {/* Pending queue */}
-      <div className="bg-white border rounded-lg overflow-hidden mb-6">
+      <div className="bg-white border rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b flex items-center gap-2">
           <BadgeCheck size={16} className="text-green-600" />
           <h2 className="font-semibold text-gray-900 text-sm">Pending verification</h2>
@@ -182,6 +183,7 @@ export default function PaymentsPage() {
         </table>
         {paid.bills.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No settled payments yet</p>}
         <Pagination page={paid.page} pages={paid.pages} total={paid.total} onChange={loadPaid} />
+      </div>
       </div>
     </div>
   );
