@@ -10,6 +10,7 @@ import {
   closeSession,
   callWaiter,
   claimPaid,
+  clearPaidClaim,
   submitFeedback,
   attendTable,
 } from '../controllers/session.controller';
@@ -29,5 +30,6 @@ router.get('/active', listActiveSessions);
 router.get('/:id', getSession);
 router.post('/:id/close', closeSession);
 router.post('/:id/attend', attendTable);
+router.post('/:id/clear-paid-claim', clearPaidClaim);
 
 export default router;

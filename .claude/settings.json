@@ -25,7 +25,8 @@
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('saved:', \\(j.settings?.paymentQrUrl||''\\).slice\\(0,40\\)+'…'\\)}\\)\")",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('saved:', \\(j.settings?.paymentQrUrl||j.message||''\\).slice\\(0,40\\)\\)}\\)\")",
       "Bash(node verify-payments.js)",
-      "Bash(git commit -q -m 'Payments v1+v1.5: static merchant QR on guest bill + '\\\\''I'\\\\''ve paid'\\\\'' signal *)"
+      "Bash(git commit -q -m 'Payments v1+v1.5: static merchant QR on guest bill + '\\\\''I'\\\\''ve paid'\\\\'' signal *)",
+      "Bash(git commit -q -m 'Cashier can dismiss a false '\\\\''I'\\\\''ve paid'\\\\'' claim *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\user\\Desktop\\Projects\\waiterless-restaurant\\apps\\web\\src\\app\\r\\[slug]\\table\\[tableToken]"

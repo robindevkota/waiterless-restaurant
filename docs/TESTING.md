@@ -7,7 +7,7 @@ Update the "Last run" line and the matrices whenever the suite or coverage chang
 
 | Date | Command | Result |
 |------|---------|--------|
-| 2026-07-05 (late) | `npm test` | **38 / 38 passed** (31 api + 7 e2e, ~46s) |
+| 2026-07-05 (late) | `npm test` | **39 / 39 passed** (32 api + 7 e2e, ~43s) |
 | 2026-07-05 | `npm test` | 33 / 33 passed (27 api + 6 e2e, ~33s) |
 
 ## How to run
@@ -31,7 +31,7 @@ npm run test:report   # open the HTML report of the last run
 - Failure artifacts (screenshots, traces, `last-run.json`) land in `test-results/`
   (gitignored). Durable results belong in this file.
 
-## ✅ Automated coverage (38 tests)
+## ✅ Automated coverage (39 tests)
 
 | Area | Spec | What's asserted |
 |------|------|-----------------|
@@ -42,7 +42,7 @@ npm run test:report   # open the HTML report of the last run
 | Smart upsell | `tests/api/guest-flow.spec.ts` | Suggestions non-empty from seeded co-occurrence, ≤3, never the cart item itself, pairCount ≥ 2; empty cart → empty |
 | Inventory v1+v2 | `tests/api/inventory.spec.ts` | Ingredient CRUD, invalid unit 400, restock, stocktake variance (+ negative count 400), stock-log entries, CSV import (upsert + row-level errors), soft delete |
 | Prep forecast | `tests/api/inventory.spec.ts` | Date/weekday shape, plates > 0 from seeded history, daysSeen ≤ window, shortfalls ≥ 0 |
-| Payments (static QR + paid claim) | `tests/api/payments.spec.ts` | Settings roundtrip + public branding exposure, garbage URL 400, guest claim flags the session (amount ≥ 0) **without touching bill status**, claim idempotent, guests cannot close sessions |
+| Payments (static QR + paid claim) | `tests/api/payments.spec.ts` | Settings roundtrip + public branding exposure, garbage URL 400, guest claim flags the session (amount ≥ 0) **without touching bill status**, claim idempotent, guests cannot close sessions, cashier dismiss clears a false claim (guests can't) |
 | Guest bill payment UI | `tests/e2e/payments.spec.ts` | QR + "Pay from your table" render on the bill; "I've paid" → "Cashier notified" |
 | Owner dashboard | `tests/e2e/owner.spec.ts` | UI login; KPI tiles incl. "Upsells earned"; revenue trend not zeros (ObjectId-cast regression guard); floor card |
 | Inventory page | `tests/e2e/owner.spec.ts` | All four tabs render real data (dishes, ingredients, tomorrow's prep + shopping list, stock log) |

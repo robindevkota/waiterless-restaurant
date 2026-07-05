@@ -143,10 +143,17 @@ export default function FloorPage() {
                     check your merchant app · {s.paidClaimedAt ? new Date(s.paidClaimedAt).toLocaleTimeString() : ''}
                   </span>
                 </p>
-                <Button size="sm" onClick={() => {
-                  const table = tables.find((t) => t._id === s.tableId._id);
-                  if (table) selectTable(table);
-                }}>Verify &amp; settle</Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button size="sm" onClick={() => {
+                    const table = tables.find((t) => t._id === s.tableId._id);
+                    if (table) selectTable(table);
+                  }}>Verify &amp; settle</Button>
+                  <Button size="sm" variant="secondary" onClick={async () => {
+                    if (!accessToken) return;
+                    await api.post(`/sessions/${s._id}/clear-paid-claim`, {}, accessToken).catch(() => {});
+                    load();
+                  }}>Dismiss</Button>
+                </div>
               </div>
             ))}
           </div>

@@ -93,6 +93,19 @@ export async function submitFeedback(req: AuthRequest, res: Response): Promise<v
   res.json({ success: true, message: 'Thanks for the feedback!' });
 }
 
+// POST /api/sessions/:id/clear-paid-claim — cashier dismisses a false/curious
+// "I've paid" tap (nothing arrived in the merchant app)
+export async function clearPaidClaim(req: AuthRequest, res: Response): Promise<void> {
+  const rid = (req as any).restaurantId;
+  const session = await TableSession.findOneAndUpdate(
+    { _id: req.params.id, restaurantId: rid },
+    { $unset: { paidClaimedAt: 1, paidClaimAmount: 1 } },
+    { new: true }
+  );
+  if (!session) throw new AppError('Session not found', 404);
+  res.json({ success: true });
+}
+
 // POST /api/sessions/:id/attend — cashier acknowledges a waiter call
 export async function attendTable(req: AuthRequest, res: Response): Promise<void> {
   const rid = (req as any).restaurantId;

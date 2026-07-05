@@ -59,6 +59,30 @@ test.describe('Payments: static QR + paid claim', () => {
     expect(bill.status ?? 'open').not.toBe('paid');
   });
 
+  test('cashier can dismiss a false paid claim (flag cleared, session stays open)', async ({ request }) => {
+    const guestToken = await guestSession(request, await getTableQrToken(request, ownerToken));
+    await request.post(`${API}/sessions/my/claim-paid`, auth(guestToken));
+
+    const cashierToken = await login(request, USERS.gfCashier);
+    const { sessions } = await (await request.get(`${API}/sessions/active`, auth(cashierToken))).json() as
+      { sessions: { _id: string; paidClaimedAt?: string }[] };
+    const flagged = sessions.find((s) => s.paidClaimedAt);
+    expect(flagged).toBeTruthy();
+
+    const clear = await request.post(`${API}/sessions/${flagged!._id}/clear-paid-claim`, auth(cashierToken));
+    expect(clear.status()).toBe(200);
+
+    const after = await (await request.get(`${API}/sessions/active`, auth(cashierToken))).json() as
+      { sessions: { _id: string; paidClaimedAt?: string; status?: string }[] };
+    const same = after.sessions.find((s) => s._id === flagged!._id);
+    expect(same, 'session must still be open after dismiss').toBeTruthy();
+    expect(same!.paidClaimedAt).toBeUndefined();
+
+    // guests can't clear flags on their own session either
+    const guestClear = await request.post(`${API}/sessions/${flagged!._id}/clear-paid-claim`, auth(guestToken));
+    expect([401, 403]).toContain(guestClear.status());
+  });
+
   test('claim-paid is idempotent and guests still cannot settle bills', async ({ request }) => {
     const guestToken = await guestSession(request, await getTableQrToken(request, ownerToken));
     const again = await request.post(`${API}/sessions/my/claim-paid`, auth(guestToken));
