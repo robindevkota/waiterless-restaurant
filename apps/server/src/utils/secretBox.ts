@@ -1,11 +1,14 @@
 /**
  * AES-256-GCM encryption for small secrets at rest (per-tenant AI API keys).
- * Key is derived from JWT_SECRET; ciphertext format: v1:<iv>:<tag>:<data> (base64).
+ * Key is derived from SECRETBOX_KEY (falls back to JWT_SECRET so old envs keep
+ * working) — keep SECRETBOX_KEY stable across JWT rotations or sealed values
+ * become unreadable. Ciphertext format: v1:<iv>:<tag>:<data> (base64).
  */
 import crypto from 'crypto';
 
 function key(): Buffer {
-  return crypto.createHash('sha256').update(`secretbox:${process.env.JWT_SECRET!}`).digest();
+  const material = process.env.SECRETBOX_KEY || process.env.JWT_SECRET!;
+  return crypto.createHash('sha256').update(`secretbox:${material}`).digest();
 }
 
 export function sealSecret(plain: string): string {
