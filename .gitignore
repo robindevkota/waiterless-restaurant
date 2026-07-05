@@ -1,0 +1,17 @@
+# deps / builds
+node_modules/
+dist/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# secrets — never commit env files
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# logs & tooling artifacts
+*.log
+.playwright-mcp/
+.DS_Store
