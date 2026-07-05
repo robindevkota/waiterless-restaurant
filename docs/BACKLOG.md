@@ -6,12 +6,16 @@ Order within each stage = priority. `[ ]` pending · `[~]` in progress · `[x]` 
 ---
 
 ## ⏭ NEXT SESSION — in this order
-1. [ ] **Needs the user's accounts**: own Atlas cluster (migrate off the borrowed
+1. [ ] **Static payment QR on bill screen + "I've paid" signal** (see Stage 4
+      payments plan — v1/v1.5; sells the payment story without merchant APIs)
+2. [ ] **Menu item photos** (Cloudinary installed, creds empty — or accept image
+      URLs like the logo does; biggest perceived-value jump in the guest portal)
+3. [ ] **Inventory ROI analytics** (last Royal Suites v2 piece) — COGS vs revenue
+      per dish over time, waste cost from stocktake variances.
+4. [ ] **Needs the user's accounts**: own Atlas cluster (migrate off the borrowed
       HeloSarkar one via mongodump/mongorestore) + fresh project-owned Groq/Gemini
       keys.
-2. [ ] **Inventory ROI analytics** (last Royal Suites v2 piece) — COGS vs revenue
-      per dish over time, waste cost from stocktake variances.
-3. [ ] Or pick from Stage 2 (tests + CI) / feature backlog below.
+5. [ ] Or: remaining test gaps (cashier bill math — top of TESTING.md list) / CI.
 
 Done 2026-07-05 (see ROADMAP Phases 10–11): git init + initial commit, JWT secrets
 rotated (+ SECRETBOX_KEY), test tenants deleted, smart upsell chips + dashboard
@@ -51,8 +55,18 @@ Excel/CSV paste import.
 - [ ] Sentry (both apps) + uptime ping on `/api/health`
 
 ## Stage 4 — Business readiness (before charging money)
-- [ ] Real payment capture for guests: eSewa / Khalti checkout APIs (currently the
-      cashier only *records* the method) — longest item, sandbox approval takes time
+- [ ] **Payments (Nepal-reality plan, decided 2026-07-05)** — most clients only
+      have a *static* merchant QR on a stand; confirmation is manual either way.
+      So: NOT building checkout APIs now.
+      - [ ] v1 **Static QR on the bill screen**: owner uploads their merchant QR
+            in Settings (like the logo) → guest's bill view shows it with the
+            amount + "pay, then show the cashier". Zero payment infra, pure UX.
+      - [ ] v1.5 **"I've paid" signal**: guest taps after paying → cashier floor
+            flags the table "claims paid — verify" → cashier settles with the
+            method pre-filled. Human verification stays.
+      - [ ] v2 **Dynamic QR adapter** — only when a client has merchant API
+            access (FonePay dynamic / eSewa ePay / Khalti KPG). Per-tenant creds
+            via the same AES-sealed settings pattern as AI keys.
 - [ ] SMTP creds (or Resend/Brevo) so staff invite emails actually send
 - [ ] Refresh-token revocation: server-side token store or tokenVersion per user
       (today a stolen refresh token stays valid 7 days)
