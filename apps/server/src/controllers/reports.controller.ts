@@ -89,6 +89,14 @@ export async function overview(req: AuthRequest, res: Response): Promise<void> {
     { $group: { _id: null, avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
   ]);
 
+  // Revenue from items guests added via "goes well with" upsell chips (30d)
+  const upsellAgg = await Order.aggregate([
+    { $match: { restaurantId: rid, status: { $ne: 'cancelled' }, createdAt: { $gte: since30 } } },
+    { $unwind: '$items' },
+    { $match: { 'items.viaUpsell': true, 'items.status': { $ne: 'cancelled' } } },
+    { $group: { _id: null, revenue: { $sum: { $multiply: ['$items.price', '$items.qty'] } }, items: { $sum: '$items.qty' } } },
+  ]);
+
   // Fill missing days with zeros so charts have a continuous 30-day series
   const byDay = new Map(daily.map((d: any) => [d._id, d]));
   const days: { date: string; revenue: number; bills: number }[] = [];
@@ -125,6 +133,9 @@ export async function overview(req: AuthRequest, res: Response): Promise<void> {
       rating: ratingAgg[0]
         ? { avg: Math.round(ratingAgg[0].avgRating * 10) / 10, count: ratingAgg[0].count }
         : null,
+      upsell: upsellAgg[0]
+        ? { revenue: upsellAgg[0].revenue, items: upsellAgg[0].items }
+        : { revenue: 0, items: 0 },
     },
     days,
     topItems: topItemsAgg,

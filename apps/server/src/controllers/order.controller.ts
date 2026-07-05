@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import { AuthRequest } from '../middleware/authenticate';
 import Order from '../models/Order';
 import MenuItem from '../models/MenuItem';
@@ -45,6 +46,7 @@ export async function placeOrder(req: AuthRequest, res: Response): Promise<void>
       qty: entry.qty,
       note: entry.note || undefined,
       status: 'pending' as const,
+      viaUpsell: entry.viaUpsell === true,
     });
   }
 
@@ -76,6 +78,60 @@ export async function placeOrder(req: AuthRequest, res: Response): Promise<void>
   io.to(`cashier:${restaurantId}`).emit(SocketEvents.ORDER_NEW, populated);
 
   res.status(201).json({ success: true, order: populated });
+}
+
+// GET /api/orders/upsell?with=id,id — "goes well with" suggestions for the cart.
+// Pure order-history co-occurrence (no LLM): sessions that ordered any cart item,
+// ranked by what else those sessions ordered. aggregate() doesn't cast string ids.
+export async function upsellSuggestions(req: AuthRequest, res: Response): Promise<void> {
+  const { restaurantId } = req.guestPayload!;
+  const rid = new mongoose.Types.ObjectId(restaurantId);
+
+  const cartIds = String(req.query.with || '')
+    .split(',')
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .slice(0, 30)
+    .map((id) => new mongoose.Types.ObjectId(id));
+  if (!cartIds.length) {
+    res.json({ success: true, suggestions: [] });
+    return;
+  }
+
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const ranked = await Order.aggregate([
+    { $match: { restaurantId: rid, status: { $ne: 'cancelled' }, createdAt: { $gte: since }, 'items.menuItemId': { $in: cartIds } } },
+    { $group: { _id: '$sessionId' } },
+    { $lookup: { from: 'orders', localField: '_id', foreignField: 'sessionId', as: 'orders' } },
+    { $unwind: '$orders' },
+    { $match: { 'orders.status': { $ne: 'cancelled' } } },
+    { $unwind: '$orders.items' },
+    { $match: { 'orders.items.status': { $ne: 'cancelled' }, 'orders.items.menuItemId': { $nin: cartIds } } },
+    // Count distinct sessions per item, not raw qty — one table ordering
+    // 10 teas shouldn't outrank an item 8 tables paired with.
+    { $group: { _id: '$orders.items.menuItemId', sessions: { $addToSet: '$_id' } } },
+    { $project: { pairCount: { $size: '$sessions' } } },
+    { $sort: { pairCount: -1 } },
+    { $limit: 10 },
+  ]);
+
+  // Keep only items a guest can actually order right now
+  const candidates = await MenuItem.find({
+    _id: { $in: ranked.map((r) => r._id) },
+    restaurantId,
+    deleted: false,
+    available: true,
+  }).select('name price').lean();
+  const byId = new Map(candidates.map((c) => [String(c._id), c]));
+
+  const suggestions = ranked
+    .filter((r) => byId.has(String(r._id)) && r.pairCount >= 2)
+    .slice(0, 3)
+    .map((r) => {
+      const item = byId.get(String(r._id))!;
+      return { menuItemId: String(r._id), name: item.name, price: item.price, pairCount: r.pairCount };
+    });
+
+  res.json({ success: true, suggestions });
 }
 
 // GET /api/orders/my  — guest views their session orders

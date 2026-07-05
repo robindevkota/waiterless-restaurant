@@ -3,13 +3,14 @@ import { useEffect, useState, useCallback } from 'react';
 import { api, setAccessToken } from '@/lib/api';
 import { useCartStore } from '@/stores/cartStore';
 import { getSocket } from '@/lib/socket';
-import { Bell, Check, Star } from 'lucide-react';
+import { Bell, Check, Plus, Sparkles, Star } from 'lucide-react';
 
 interface MenuItem { _id: string; name: string; description: string; price: number; tags: string[]; preparationTime?: number; categoryId: { name: string }; }
 interface Category { _id: string; name: string; }
 interface OrderItem { name: string; qty: number; status: string; }
 interface Order { _id: string; items: OrderItem[]; placedAt: string; }
 interface Bill { subtotal: number; vatRate: number; vatAmount: number; total: number; }
+interface UpsellSuggestion { menuItemId: string; name: string; price: number; pairCount: number; }
 
 type View = 'menu' | 'cart' | 'orders' | 'bill' | 'closed';
 
@@ -85,6 +86,19 @@ export default function GuestPortal({ slug, tableToken, restaurantName, tagline,
   useEffect(() => { if (view === 'orders') loadOrders(); }, [view, loadOrders]);
   useEffect(() => { if (view === 'bill') loadBill(); }, [view, loadBill]);
 
+  // "Goes well with" suggestions — refresh (debounced) while the cart is open
+  const [suggestions, setSuggestions] = useState<UpsellSuggestion[]>([]);
+  const cartIdsKey = cartItems.map((i) => i.menuItemId).sort().join(',');
+  useEffect(() => {
+    if (!guestToken || view !== 'cart' || !cartIdsKey) { setSuggestions([]); return; }
+    const t = setTimeout(() => {
+      api.get<{ suggestions: UpsellSuggestion[] }>(`/orders/upsell?with=${cartIdsKey}`, guestToken)
+        .then((d) => setSuggestions(d.suggestions))
+        .catch(() => setSuggestions([]));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [guestToken, view, cartIdsKey]);
+
   // Socket: live updates
   useEffect(() => {
     if (!guestToken) return;
@@ -100,7 +114,7 @@ export default function GuestPortal({ slug, tableToken, restaurantName, tagline,
     setPlacing(true); setPlaceError('');
     try {
       await api.post('/orders', {
-        items: cartItems.map((i) => ({ menuItemId: i.menuItemId, qty: i.qty, note: i.note })),
+        items: cartItems.map((i) => ({ menuItemId: i.menuItemId, qty: i.qty, note: i.note, viaUpsell: i.viaUpsell || undefined })),
       }, guestToken);
       clearCart();
       setView('orders');
@@ -305,6 +319,26 @@ export default function GuestPortal({ slug, tableToken, restaurantName, tagline,
                     <p className="font-semibold text-gray-900 w-16 text-right">NPR {item.price * item.qty}</p>
                   </div>
                 ))}
+
+                {suggestions.length > 0 && (
+                  <div className="bg-white rounded-xl border p-4">
+                    <p className="text-xs font-semibold text-gray-500 flex items-center gap-1.5 mb-3">
+                      <Sparkles size={14} className="text-[var(--primary,#E85D04)]" /> Goes well with your order
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestions.map((s) => (
+                        <button
+                          key={s.menuItemId}
+                          onClick={() => addItem({ menuItemId: s.menuItemId, name: s.name, price: s.price, viaUpsell: true })}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--primary,#E85D04)]/40 bg-[var(--primary,#E85D04)]/5 px-3 py-1.5 text-sm font-medium text-gray-800 active:scale-95 transition-transform"
+                        >
+                          <Plus size={14} className="text-[var(--primary,#E85D04)]" />
+                          {s.name} <span className="text-gray-400">· NPR {s.price}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="bg-white rounded-xl border p-4 mt-4">
                   <div className="flex justify-between font-bold text-lg">

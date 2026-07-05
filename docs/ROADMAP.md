@@ -134,6 +134,23 @@ Ported (lighter v1) from the Royal Suites spec; pure arithmetic, no AI.
       Polls every 20s; waiter calls flash a full-width red banner live via
       socket (auto-clears after 3 min). Verified in browser with live orders.
 
+## Phase 10 — Foundation + smart upsell ✅ (2026-07-05)
+- [x] **Git**: repo initialized, hardened `.gitignore` (env files excluded, examples
+      kept), initial commit of all shipped work.
+- [x] **Secrets rotated**: strong random `JWT_SECRET`/`JWT_REFRESH_SECRET`; new
+      `SECRETBOX_KEY` decouples AI-key encryption from JWT rotations
+      (`secretBox.ts` prefers it, falls back to JWT_SECRET for old envs).
+- [x] Test tenants deleted (`test-bistro`, `himalayan-kitchen`) via reusable
+      `src/scripts/delete-tenant.ts <slug>`; stale sealed AI keys cleared.
+- [x] **Smart upsell** 💰: `GET /api/orders/upsell?with=ids` — session-level order
+      co-occurrence over 90 days (pure Mongo, no LLM), distinct-session ranking,
+      only currently-available items, min 2 shared sessions. "Goes well with your
+      order" chips in the guest cart (brand-tinted, debounced refresh); items added
+      via chip carry `viaUpsell` through to the order; dashboard KPI tile
+      "Upsells earned · 30 days". Verified end-to-end in browser: momo → suggested
+      Dal Bhat Set/Lassi/Chicken Thali (83/76/76 shared sessions), Lassi added via
+      chip → order stored `viaUpsell: true` → NPR 120 on the dashboard tile.
+
 ## Backlog
 Moved to **`BACKLOG.md`** (single source of truth for pending work, including the
 production-readiness checklist). This file keeps only shipped phases + decisions.

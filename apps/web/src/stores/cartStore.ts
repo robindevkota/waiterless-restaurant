@@ -8,6 +8,7 @@ export interface CartItem {
   price: number;
   qty: number;
   note?: string;
+  viaUpsell?: boolean; // added from a "goes well with" chip — tracked for the owner stat
 }
 
 interface CartState {

@@ -16,6 +16,7 @@ interface Overview {
     };
     tables: { total: number; occupied: number };
     rating: { avg: number; count: number } | null;
+    upsell: { revenue: number; items: number };
   };
   days: { date: string; revenue: number; bills: number }[];
   topItems: { _id: string; name: string; totalQty: number; totalRevenue: number }[];
@@ -102,6 +103,7 @@ export default function OwnerDashboard() {
   const today = data?.kpis.today;
   const tables = data?.kpis.tables;
   const rating = data?.kpis.rating;
+  const upsell = data?.kpis.upsell;
   const occupancy = tables?.total ? tables.occupied / tables.total : 0;
 
   return (
@@ -167,13 +169,15 @@ export default function OwnerDashboard() {
       </div>
 
       {/* KPI row */}
-      <div className="grid sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatTile brand={brand} icon={<Banknote size={18} />} label="Revenue · 7 days"
           value={week ? fmtMoney(week.revenue) : '—'} delta={week?.revenueDelta ?? null} spark={spark14('revenue')} />
         <StatTile brand={brand} icon={<ReceiptText size={18} />} label="Sessions · 7 days"
           value={week ? String(week.sessions) : '—'} delta={week?.sessionsDelta ?? null} spark={spark14('bills')} />
         <StatTile brand={brand} icon={<Gauge size={18} />} label="Average bill · 7 days"
           value={week ? fmtMoney(week.avgBill) : '—'} delta={week?.avgBillDelta ?? null} />
+        <StatTile brand={brand} icon={<Sparkles size={18} />} label={`Upsells earned · 30 days${upsell?.items ? ` (${upsell.items} item${upsell.items === 1 ? '' : 's'})` : ''}`}
+          value={upsell ? fmtMoney(upsell.revenue) : '—'} delta={null} />
       </div>
 
       {/* Revenue chart + live floor */}

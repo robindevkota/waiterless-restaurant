@@ -4,13 +4,16 @@ import { requireKitchen, requireCashier } from '../middleware/authorize';
 import { injectRestaurantId } from '../middleware/tenantGuard';
 import { tenantStatusGuard } from '../middleware/tenantStatusGuard';
 import {
-  placeOrder, myOrders, activeOrders, sessionOrders, updateItemStatus,
+  placeOrder, myOrders, activeOrders, sessionOrders, updateItemStatus, upsellSuggestions,
 } from '../controllers/order.controller';
 
 const router = Router();
 
 // Guest places order
 router.post('/', authenticateGuest, tenantStatusGuard, placeOrder);
+
+// Guest cart "goes well with" suggestions
+router.get('/upsell', authenticateGuest, tenantStatusGuard, upsellSuggestions);
 
 // Guest views their orders
 router.get('/my', authenticateGuest, tenantStatusGuard, myOrders);

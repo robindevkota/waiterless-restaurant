@@ -9,6 +9,7 @@ export interface IOrderItem {
   qty: number;
   note?: string;
   status: OrderItemStatus;
+  viaUpsell?: boolean; // added from a "goes well with" suggestion chip
 }
 
 export interface IOrder extends Document {
@@ -34,6 +35,7 @@ const OrderItemSchema = new Schema<IOrderItem>(
       enum: ['pending', 'preparing', 'ready', 'served', 'cancelled'],
       default: 'pending',
     },
+    viaUpsell:  { type: Boolean, default: false },
   },
   { _id: true }
 );

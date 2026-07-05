@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"api:%{http_code} \" http://localhost:5000/api/health)",
+      "Bash(curl -s -o /dev/null -w \"web:%{http_code}\\\\n\" http://localhost:3001)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

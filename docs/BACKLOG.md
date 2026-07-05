@@ -5,27 +5,29 @@ Order within each stage = priority. `[ ]` pending · `[~]` in progress · `[x]` 
 
 ---
 
-## ⏭ NEXT SESSION (planned 2026-07-06) — in this order
-1. [ ] **Stage 1 foundation** (top priority — 3 days of work exist with zero
-      version history): `git init` + `.gitignore` + initial commit, rotate
-      JWT secrets, delete test tenants. (Own Atlas cluster + fresh AI keys need
-      the user's accounts — prepare, then hand over.)
-2. [ ] **Smart upsell chips in guest cart** 💰 — order co-occurrence pairing
-      (pure Mongo, no LLM) + "Upsells earned NPR X" dashboard stat.
-3. [ ] **Tomorrow's prep list** — per-item weekday demand forecast for the
+## ⏭ NEXT SESSION — in this order
+1. [ ] **Tomorrow's prep list** — per-item weekday demand forecast for the
       kitchen; ties into inventory (suggest restock quantities).
-4. [ ] **Inventory v2** (if time) — Excel import, stocktake/variance, ROI
+2. [ ] **Inventory v2** (if time) — Excel import, stocktake/variance, ROI
       analytics from the Royal Suites spec.
+3. [ ] **Needs the user's accounts**: own Atlas cluster (migrate off the borrowed
+      HeloSarkar one via mongodump/mongorestore) + fresh project-owned Groq/Gemini
+      keys.
+
+Done 2026-07-05 (see ROADMAP Phase 10): git init + initial commit, JWT secrets
+rotated (+ SECRETBOX_KEY), test tenants deleted, smart upsell chips + dashboard stat.
 
 ---
 
 ## Stage 1 — Foundation (before any more features)
-- [ ] `git init` + `.gitignore` (`.env*`, `node_modules`, `.next`, `dist`) + initial commit
-- [ ] Rotate secrets: strong random `JWT_SECRET` / `JWT_REFRESH_SECRET`; fresh
-      project-owned Groq + Gemini keys (current ones are borrowed from NewWeb)
+- [x] `git init` + `.gitignore` + initial commit (2026-07-05)
+- [x] Rotate secrets: strong random `JWT_SECRET` / `JWT_REFRESH_SECRET` +
+      `SECRETBOX_KEY` (2026-07-05). Still open: fresh project-owned Groq + Gemini
+      keys (current ones are borrowed from NewWeb) — needs the user's accounts.
 - [ ] Own MongoDB Atlas project + cluster with backups (currently borrowing the
       HeloSarkar cluster — see CLAUDE.md gotchas); migrate via mongodump/mongorestore
-- [ ] Delete test tenants: `test-bistro`, `himalayan-kitchen` (+ their owner users)
+- [x] Delete test tenants: `test-bistro`, `himalayan-kitchen` (2026-07-05, via
+      `apps/server/src/scripts/delete-tenant.ts <slug>`)
 
 ## Stage 2 — Correctness safety net
 - [ ] Integration tests on the money/tenancy paths (jest + supertest +
@@ -57,10 +59,8 @@ Order within each stage = priority. `[ ]` pending · `[~]` in progress · `[x]` 
 ## Next up (planned 2026-07-05)
 - [x] **"Talk to your restaurant" — AI chat over sales data** ⭐ ✅ shipped
       2026-07-05 — see ROADMAP Phase 8.
-- [ ] **Smart upsell in guest portal** 💰 revenue story. Item-pairing from order
-      co-occurrence (pure Mongo aggregation, no LLM): "Goes well with Masala Tea —
-      add for NPR 80?" chip in cart + "Upsells added NPR X this month" stat on
-      dashboard.
+- [x] **Smart upsell in guest portal** 💰 ✅ shipped 2026-07-05 — see ROADMAP
+      Phase 10. Co-occurrence chips in cart + "Upsells earned" dashboard tile.
 - [ ] **Tomorrow's prep list** — per-item demand forecast from weekday/history
       ("expect ~45 momo plates Saturday"); page or card for kitchen; needs the
       30-day+ history we already seed.
