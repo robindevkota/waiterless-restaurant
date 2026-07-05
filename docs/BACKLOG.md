@@ -31,10 +31,14 @@ Excel/CSV paste import.
       `apps/server/src/scripts/delete-tenant.ts <slug>`)
 
 ## Stage 2 — Correctness safety net
-- [ ] Integration tests on the money/tenancy paths (jest + supertest +
-      mongodb-memory-server): bill totals on session close, cross-tenant isolation
-      (foreign id → 404), signup, plan limits
-- [ ] GitHub Actions CI: `tsc --noEmit` (server + web) + tests on every push
+- [x] Test suite (2026-07-05): Playwright `tests/api` + `tests/e2e`, 33 tests —
+      auth/roles, tenant isolation, guest order → inventory deduction → bill,
+      upsell, inventory v1+v2, prep forecast, dashboard/portal/KDS UI.
+      Coverage map + gaps: **`docs/TESTING.md`**.
+- [ ] Remaining test gaps (priority list in TESTING.md): cashier session-close
+      bill math, auto-86 cycle, socket e2e, signup, concurrent-order race
+- [ ] GitHub Actions CI: `tsc --noEmit` (server + web) + `npm test` on every push
+      (needs a seeded Mongo service or mongodb-memory-server adaptation)
 
 ## Stage 3 — Deployment
 - [ ] Host: web → Vercel, API → Railway/Render (Socket.io needs a long-lived process),

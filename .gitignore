@@ -15,3 +15,7 @@ dist/
 *.log
 .playwright-mcp/
 .DS_Store
+
+# test artifacts (durable results live in docs/TESTING.md)
+test-results/
+playwright-report/

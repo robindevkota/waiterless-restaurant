@@ -16,7 +16,10 @@
       "Bash(node verify-v2.js)",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{JSON.parse\\(d\\).logs.forEach\\(l=>console.log\\(l.type, l.ingredientId?.name, l.qty, '→', l.stockAfter, l.note||''\\)\\)}\\)\")",
       "Bash(node verify-import.js)",
-      "Bash(git commit -q -m 'Tomorrow'\\\\''s prep list + inventory v2 \\(stocktake, CSV import\\) *)"
+      "Bash(git commit -q -m 'Tomorrow'\\\\''s prep list + inventory v2 \\(stocktake, CSV import\\) *)",
+      "Bash(node -e \"console.log\\(require\\('@playwright/test/package.json'\\).version\\)\")",
+      "Bash(npx playwright *)",
+      "Bash(git commit -q -m 'Automated test suite: Playwright api + e2e projects, 33 tests green *)"
     ]
   }
 }

@@ -23,10 +23,15 @@ npm run dev                # root: starts server + web via turbo
 npm run seed               # apps/server: base data (2 restaurants, staff, menus, tables)
 npm run seed:demo          # apps/server: 30 days of realistic history for golden-fork
 npx tsc --noEmit           # run in apps/server AND apps/web before calling work done
+npm test                   # root: Playwright suite (tests/api + tests/e2e) vs seeded dev stack
 ```
 
-Demo logins: `owner@goldenfork.com / Owner@1234` (also cashier@/kitchen@, same for
-spicegarden.com, platform admin `admin@waiterless.app / Admin@1234`).
+Test coverage map (tested vs untested + next tests to write): **`docs/TESTING.md`** —
+keep its matrices and "Last run" line updated whenever tests or coverage change.
+
+Demo logins: `owner@goldenfork.com / Owner@1234` (also cashier@/kitchen@ with
+Cashier@1234/Kitchen@1234, same for spicegarden.com, platform admin
+`admin@waiterless.app / Admin@1234`).
 
 ## Architecture rules
 

@@ -170,6 +170,19 @@ Ported (lighter v1) from the Royal Suites spec; pure arithmetic, no AI.
       Verified through the modal: pasted tab-separated rows → "2 created".
 - Still open from the Royal Suites spec: ROI analytics (COGS vs revenue trend).
 
+## Phase 12 — Automated test suite ✅ (2026-07-05)
+- [x] Playwright Test at root: `tests/api` (request-level, 27 tests) +
+      `tests/e2e` (headless Chromium, 6 tests) + shared helpers; runs against
+      the seeded dev stack (auto-starts it via `webServer` if down).
+      `npm test` / `test:api` / `test:e2e` / `test:report`.
+- [x] Covers: auth + role guards + secret-leak checks, cross-tenant 404 probes,
+      guest QR→order→stock-deduction→bill, upsell rules, inventory v1+v2 CRUD/
+      stocktake/import, prep forecast, dashboard/inventory/branding/guest-portal/
+      KDS UI (incl. upsell chip click and prep drawer).
+- [x] **`docs/TESTING.md`** = living coverage map: last run, automated matrix,
+      manually-verified-only list, untested list, next-tests priority order.
+      First full run: **33/33 passed**. (Superseded `docs/test-status.md`.)
+
 ## Backlog
 Moved to **`BACKLOG.md`** (single source of truth for pending work, including the
 production-readiness checklist). This file keeps only shipped phases + decisions.
