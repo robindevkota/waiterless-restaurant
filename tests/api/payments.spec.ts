@@ -83,6 +83,58 @@ test.describe('Payments: static QR + paid claim', () => {
     expect([401, 403]).toContain(guestClear.status());
   });
 
+  test('full settle flow: open → order → claim → settle; bill math + paid history', async ({ request }) => {
+    const cashierToken = await login(request, USERS.gfCashier);
+
+    // Self-contained: open a session on a free table, close it at the end
+    const tablesRes = await (await request.get(`${API}/tables`, auth(ownerToken))).json();
+    const freeTable = tablesRes.tables.find((t: { status: string }) => t.status === 'available');
+    expect(freeTable, 'an available table to test on').toBeTruthy();
+    const open = await request.post(`${API}/sessions`, { ...auth(cashierToken), data: { tableId: freeTable._id } });
+    expect(open.status()).toBe(201);
+
+    // Guest scans this table's QR, orders one item, claims paid
+    const guestToken = await guestSession(request, freeTable.qrToken);
+    const items = (await (await request.get(`${API}/menu/items`, auth(guestToken))).json()).items as
+      { _id: string; name: string; price: number }[];
+    const momo = items.find((i) => /momo/i.test(i.name))!;
+    await request.post(`${API}/orders`, { ...auth(guestToken), data: { items: [{ menuItemId: momo._id, qty: 2 }] } });
+    await request.post(`${API}/sessions/my/claim-paid`, auth(guestToken));
+
+    // Cashier's view of the bill matches guest's order, VAT math correct (13% seeded)
+    const { sessions } = await (await request.get(`${API}/sessions/active`, auth(cashierToken))).json() as
+      { sessions: { _id: string; tableId: { _id: string }; paidClaimedAt?: string; paidClaimAmount?: number }[] };
+    const mine = sessions.find((s) => s.tableId._id === freeTable._id)!;
+    expect(mine.paidClaimedAt).toBeTruthy();
+    const bill = (await (await request.get(`${API}/billing/session/${mine._id}`, auth(cashierToken))).json()).bill;
+    expect(bill.subtotal).toBe(momo.price * 2);
+    expect(bill.vatAmount).toBeCloseTo(bill.subtotal * (bill.vatRate / 100), 2);
+    expect(bill.total).toBeCloseTo(bill.subtotal + bill.vatAmount, 2);
+    expect(mine.paidClaimAmount).toBeCloseTo(bill.total, 2);
+
+    // Settle (as the Payments queue does), table frees up, bill lands in /billing/paid
+    const close = await request.post(`${API}/sessions/${mine._id}/close`, {
+      ...auth(cashierToken), data: { paymentMethod: 'esewa' },
+    });
+    expect(close.status()).toBe(200);
+
+    const paidList = await (await request.get(`${API}/billing/paid?limit=5`, auth(cashierToken))).json() as
+      { bills: { total: number; paymentMethod?: string; sessionId: { tableId: { label: string } | null } | null }[]; today: { revenue: number; count: number } };
+    expect(paidList.bills[0].total).toBeCloseTo(bill.total, 2);
+    expect(paidList.bills[0].paymentMethod).toBe('esewa');
+    expect(paidList.bills[0].sessionId?.tableId?.label).toBe(freeTable.label);
+    expect(paidList.today.count).toBeGreaterThan(0);
+
+    const after = await (await request.get(`${API}/tables`, auth(ownerToken))).json();
+    expect(after.tables.find((t: { _id: string }) => t._id === freeTable._id).status).toBe('available');
+  });
+
+  test('paid-bills list is staff-only', async ({ request }) => {
+    const guestToken = await guestSession(request, await getTableQrToken(request, ownerToken));
+    const res = await request.get(`${API}/billing/paid`, auth(guestToken));
+    expect([401, 403]).toContain(res.status());
+  });
+
   test('claim-paid is idempotent and guests still cannot settle bills', async ({ request }) => {
     const guestToken = await guestSession(request, await getTableQrToken(request, ownerToken));
     const again = await request.post(`${API}/sessions/my/claim-paid`, auth(guestToken));

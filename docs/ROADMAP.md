@@ -203,6 +203,15 @@ human either way. See BACKLOG Stage 4 for the dynamic-QR v2 trigger.
       URL validation, claim flags session but bill stays open, guests can't
       close sessions) + `tests/e2e/payments.spec.ts` (QR renders on bill,
       paid-signal confirmation). Suite now **38/38**.
+- [x] **Payments workspace** (same day): cashier app got a Floor | Payments nav.
+      `/payments` = pending queue (claims oldest-first, inline method picker +
+      Settle/Dismiss — built for rush hours, state-derived so nothing is lost)
+      + Paid history (`GET /api/billing/paid`, paginated, method/ref/processed-by,
+      "collected today" totals; owner has access too). Cashier can dismiss a
+      curious "I've paid" tap (`POST /sessions/:id/clear-paid-claim`). Floor side
+      panel now refreshes orders + bill live via `order:new` when the guest
+      orders more while the panel is open. Full settle flow + VAT math + paid
+      history covered by tests — suite **41/41**.
 
 ## Backlog
 Moved to **`BACKLOG.md`** (single source of truth for pending work, including the

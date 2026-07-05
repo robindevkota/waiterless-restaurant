@@ -60,6 +60,26 @@ export default function FloorPage() {
   // Open sessions where the guest tapped "I've paid" — cashier must verify
   const paidClaims = activeSessions.filter((s) => s.paidClaimedAt);
 
+  // Keep the open side panel live: a new order on the selected session
+  // refreshes its order list + running bill
+  const selectedSid = selectedTable ? sessionId(selectedTable) : null;
+  useEffect(() => {
+    if (!accessToken || !selectedSid) return;
+    const socket = getSocket(accessToken);
+    const onOrder = async (order: { sessionId?: string }) => {
+      if (String(order?.sessionId) !== selectedSid) return;
+      const [ordersData, billData] = await Promise.all([
+        api.get<{ orders: OrderSummary[] }>(`/orders/session/${selectedSid}`, accessToken),
+        api.get<{ bill: typeof bill }>(`/billing/session/${selectedSid}`, accessToken),
+      ]);
+      setSessionOrders(ordersData.orders);
+      setBill(billData.bill);
+    };
+    socket.on('order:new', onOrder);
+    return () => { socket.off('order:new', onOrder); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken, selectedSid]);
+
   async function attend(call: WaiterCall) {
     setWaiterCalls((prev) => prev.filter((c) => c.tableId !== call.tableId));
     if (accessToken) {

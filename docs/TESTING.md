@@ -7,7 +7,7 @@ Update the "Last run" line and the matrices whenever the suite or coverage chang
 
 | Date | Command | Result |
 |------|---------|--------|
-| 2026-07-05 (late) | `npm test` | **39 / 39 passed** (32 api + 7 e2e, ~43s) |
+| 2026-07-05 (late) | `npm test` | **41 / 41 passed** (34 api + 7 e2e, ~50s) |
 | 2026-07-05 | `npm test` | 33 / 33 passed (27 api + 6 e2e, ~33s) |
 
 ## How to run
@@ -31,7 +31,7 @@ npm run test:report   # open the HTML report of the last run
 - Failure artifacts (screenshots, traces, `last-run.json`) land in `test-results/`
   (gitignored). Durable results belong in this file.
 
-## ✅ Automated coverage (39 tests)
+## ✅ Automated coverage (41 tests)
 
 | Area | Spec | What's asserted |
 |------|------|-----------------|
@@ -43,6 +43,7 @@ npm run test:report   # open the HTML report of the last run
 | Inventory v1+v2 | `tests/api/inventory.spec.ts` | Ingredient CRUD, invalid unit 400, restock, stocktake variance (+ negative count 400), stock-log entries, CSV import (upsert + row-level errors), soft delete |
 | Prep forecast | `tests/api/inventory.spec.ts` | Date/weekday shape, plates > 0 from seeded history, daysSeen ≤ window, shortfalls ≥ 0 |
 | Payments (static QR + paid claim) | `tests/api/payments.spec.ts` | Settings roundtrip + public branding exposure, garbage URL 400, guest claim flags the session (amount ≥ 0) **without touching bill status**, claim idempotent, guests cannot close sessions, cashier dismiss clears a false claim (guests can't) |
+| Cashier settle flow 💰 | `tests/api/payments.spec.ts` | Open session → order → claim → cashier bill matches order, **VAT math** (subtotal × rate, total), claim amount = bill total, settle → table freed, bill in `/billing/paid` with method/table/today totals; paid list is staff-only |
 | Guest bill payment UI | `tests/e2e/payments.spec.ts` | QR + "Pay from your table" render on the bill; "I've paid" → "Cashier notified" |
 | Owner dashboard | `tests/e2e/owner.spec.ts` | UI login; KPI tiles incl. "Upsells earned"; revenue trend not zeros (ObjectId-cast regression guard); floor card |
 | Inventory page | `tests/e2e/owner.spec.ts` | All four tabs render real data (dishes, ingredients, tomorrow's prep + shopping list, stock log) |
@@ -64,7 +65,7 @@ npm run test:report   # open the HTML report of the last run
 | Dark/light theme toggle | 2026-07-04 | Assert `dark` class + a token color |
 | Branding save → live CSS vars + guest portal SSR theme | 2026-07-04 | e2e: change color, assert `--primary` |
 | Signup → empty dashboard | 2026-07-03 | Creates tenants — needs cleanup step (use `scripts/delete-tenant.ts`) |
-| Cashier floor: session open/close, bill settle, attend | 2026-07-03 | **Biggest gap — it's the money-collection path** |
+| Cashier Payments page UI (queue rows, settle button, paid table) | 2026-07-05 | API flow is automated; the page itself verified visually |
 | Platform admin: list/block restaurants | 2026-04-11 | Oldest verification — re-verify when touched |
 
 ## ❌ Not tested at all (and mostly not implemented)
@@ -78,9 +79,9 @@ npm run test:report   # open the HTML report of the last run
 
 ## Next tests to add (priority order)
 
-1. Cashier flow API: open session → orders → close session → bill totals + VAT math
+1. ~~Cashier flow API~~ ✅ done 2026-07-05 (`payments.spec.ts` full settle flow)
 2. Auto-86 cycle: drain an ingredient → dish 404s for guests → restock → back
-3. Socket e2e: waiter call appears on a second (cashier) page
+3. Socket e2e: waiter call + payment claim appear live on a second (cashier) page
 4. Signup happy path + tenant cleanup
 5. Concurrency: two parallel orders for the last serving — exactly one succeeds
 
