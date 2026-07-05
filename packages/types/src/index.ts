@@ -46,6 +46,8 @@ export interface RestaurantSettings {
   timezone: string;
   allowGuestNotes: boolean;
   autoCloseAfterMinutes: number;
+  /** Image URL of the restaurant's static merchant payment QR (eSewa/Khalti/FonePay) */
+  paymentQrUrl?: string;
   ai?: AiSettings;
 }
 
@@ -128,6 +130,7 @@ export const SocketEvents = {
   // Cashier receives
   ORDER_COMPLETED: 'order:completed',
   WAITER_CALLED: 'waiter:called',
+  PAYMENT_CLAIMED: 'payment:claimed',
 } as const;
 
 // ─── Plan Limits ──────────────────────────────────────────────────────────────

@@ -19,7 +19,16 @@
       "Bash(git commit -q -m 'Tomorrow'\\\\''s prep list + inventory v2 \\(stocktake, CSV import\\) *)",
       "Bash(node -e \"console.log\\(require\\('@playwright/test/package.json'\\).version\\)\")",
       "Bash(npx playwright *)",
-      "Bash(git commit -q -m 'Automated test suite: Playwright api + e2e projects, 33 tests green *)"
+      "Bash(git commit -q -m 'Automated test suite: Playwright api + e2e projects, 33 tests green *)",
+      "Bash(git commit -q -m 'CLAUDE.md: check docs/TESTING.md before any testing work *)",
+      "Bash(grep -n \"paymentQrUrl\" src/app/r/\\\\[slug\\\\]/table/\\\\[tableToken\\\\]/GuestPortal.tsx && sed -i 's|<img src={paymentQrUrl} alt=\"Payment QR\"|<img src={paymentQr} alt=\"Payment QR\"|' src/app/r/\\\\[slug\\\\]/table/\\\\[tableToken\\\\]/GuestPortal.tsx && grep -n \"img src={paymentQr}\" src/app/r/\\\\[slug\\\\]/table/\\\\[tableToken\\\\]/GuestPortal.tsx)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('saved:', \\(j.settings?.paymentQrUrl||''\\).slice\\(0,40\\)+'…'\\)}\\)\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('saved:', \\(j.settings?.paymentQrUrl||j.message||''\\).slice\\(0,40\\)\\)}\\)\")",
+      "Bash(node verify-payments.js)",
+      "Bash(git commit -q -m 'Payments v1+v1.5: static merchant QR on guest bill + '\\\\''I'\\\\''ve paid'\\\\'' signal *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\user\\Desktop\\Projects\\waiterless-restaurant\\apps\\web\\src\\app\\r\\[slug]\\table\\[tableToken]"
     ]
   }
 }

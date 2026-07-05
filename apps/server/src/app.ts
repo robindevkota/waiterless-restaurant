@@ -51,8 +51,10 @@ app.use(
 );
 
 // ── Body parsing ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// 150kb: settings can carry an inline data:image payment QR (tens of KB);
+// everything else stays tiny
+app.use(express.json({ limit: '150kb' }));
+app.use(express.urlencoded({ extended: true, limit: '150kb' }));
 app.use(cookieParser());
 app.use(mongoSanitize());
 app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));

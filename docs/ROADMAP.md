@@ -183,6 +183,27 @@ Ported (lighter v1) from the Royal Suites spec; pure arithmetic, no AI.
       manually-verified-only list, untested list, next-tests priority order.
       First full run: **33/33 passed**. (Superseded `docs/test-status.md`.)
 
+## Phase 13 — Payments, Nepal-reality v1 + v1.5 ✅ (2026-07-05)
+Decision: no checkout APIs — clients have static merchant QRs; verification is
+human either way. See BACKLOG Stage 4 for the dynamic-QR v2 trigger.
+- [x] `settings.paymentQrUrl` (Settings → Payments card with preview; validated
+      http(s)/data:image, ≤100 KB; body-parser limit raised 10 kb → 150 kb for
+      inline QR data URIs).
+- [x] Guest bill screen: "Pay from your table" card — merchant QR + amount +
+      **"I've paid"** button (60s debounce). QR travels with `GET /billing/my`
+      (fresh) rather than the 60s-cached SSR branding payload.
+- [x] `POST /api/sessions/my/claim-paid`: advisory only — stamps
+      `paidClaimedAt/paidClaimAmount` on the session and emits
+      `payment:claimed` to the cashier room. **Never touches bill status**;
+      settle stays cashier-only.
+- [x] Cashier floor: green "claims paid NPR X — check your merchant app" banner
+      with *Verify & settle* (selects the table), plus a badge on the table
+      card; derived from session state so it survives reloads.
+- [x] Tests: `tests/api/payments.spec.ts` (settings roundtrip + public payload,
+      URL validation, claim flags session but bill stays open, guests can't
+      close sessions) + `tests/e2e/payments.spec.ts` (QR renders on bill,
+      paid-signal confirmation). Suite now **38/38**.
+
 ## Backlog
 Moved to **`BACKLOG.md`** (single source of truth for pending work, including the
 production-readiness checklist). This file keeps only shipped phases + decisions.

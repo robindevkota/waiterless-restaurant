@@ -10,6 +10,7 @@ interface PublicBranding {
   primaryColor: string; secondaryColor: string; accentColor: string;
   backgroundColor: string; fontFamily: string; restaurantName: string;
   tagline?: string; logoUrl?: string; faviconUrl?: string;
+  paymentQrUrl?: string;
 }
 
 const DEFAULT_BRANDING: PublicBranding = {
@@ -24,7 +25,7 @@ async function fetchBranding(slug: string): Promise<PublicBranding> {
     });
     if (!res.ok) return DEFAULT_BRANDING;
     const data = await res.json();
-    return { ...DEFAULT_BRANDING, ...data.branding };
+    return { ...DEFAULT_BRANDING, ...data.branding, paymentQrUrl: data.paymentQrUrl };
   } catch {
     return DEFAULT_BRANDING;
   }
@@ -59,6 +60,7 @@ export default async function GuestPage({ params }: Props) {
         restaurantName={branding.restaurantName}
         tagline={branding.tagline}
         logoUrl={branding.logoUrl}
+        paymentQrUrl={branding.paymentQrUrl}
       />
     </div>
   );

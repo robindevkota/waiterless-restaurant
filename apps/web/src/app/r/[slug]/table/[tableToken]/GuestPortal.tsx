@@ -20,9 +20,10 @@ interface GuestPortalProps {
   restaurantName?: string;
   tagline?: string;
   logoUrl?: string;
+  paymentQrUrl?: string;
 }
 
-export default function GuestPortal({ slug, tableToken, restaurantName, tagline, logoUrl }: GuestPortalProps) {
+export default function GuestPortal({ slug, tableToken, restaurantName, tagline, logoUrl, paymentQrUrl }: GuestPortalProps) {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [tableLabel, setTableLabel] = useState('');
@@ -77,10 +78,13 @@ export default function GuestPortal({ slug, tableToken, restaurantName, tagline,
     setOrders(data.orders);
   }, [guestToken]);
 
+  // QR arrives with the bill (always fresh); SSR prop is just the first paint
+  const [paymentQr, setPaymentQr] = useState<string | undefined>(paymentQrUrl);
   const loadBill = useCallback(async () => {
     if (!guestToken) return;
-    const data = await api.get<{ bill: Bill }>('/billing/my', guestToken);
+    const data = await api.get<{ bill: Bill; paymentQrUrl?: string }>('/billing/my', guestToken);
     setBill(data.bill);
+    setPaymentQr(data.paymentQrUrl);
   }, [guestToken]);
 
   useEffect(() => { if (view === 'orders') loadOrders(); }, [view, loadOrders]);
@@ -121,6 +125,19 @@ export default function GuestPortal({ slug, tableToken, restaurantName, tagline,
       loadOrders();
     } catch (err: unknown) { setPlaceError(err instanceof Error ? err.message : 'Failed to place order'); }
     finally { setPlacing(false); }
+  }
+
+  // "I've paid" — advisory signal to the cashier, who verifies before settling
+  const [paidClaimed, setPaidClaimed] = useState(false);
+  async function claimPaid() {
+    if (!guestToken || paidClaimed) return;
+    setPaidClaimed(true);
+    try {
+      await api.post('/sessions/my/claim-paid', {}, guestToken);
+      setTimeout(() => setPaidClaimed(false), 60_000); // allow again after a minute
+    } catch {
+      setPaidClaimed(false);
+    }
   }
 
   async function callWaiter() {
@@ -385,11 +402,31 @@ export default function GuestPortal({ slug, tableToken, restaurantName, tagline,
           <div className="p-4">
             <h2 className="font-bold text-gray-900 mb-4">Your bill</h2>
             {bill ? (
-              <div className="bg-white rounded-xl border p-5 space-y-3">
-                <div className="flex justify-between text-sm text-gray-600"><span>Subtotal</span><span>NPR {bill.subtotal.toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm text-gray-600"><span>VAT ({bill.vatRate}%)</span><span>NPR {bill.vatAmount.toLocaleString()}</span></div>
-                <div className="border-t pt-3 flex justify-between font-bold text-lg"><span>Total</span><span>NPR {bill.total.toLocaleString()}</span></div>
-                <p className="text-xs text-gray-400 text-center pt-2">Please pay at the counter or ask your cashier.</p>
+              <div className="space-y-3">
+                <div className="bg-white rounded-xl border p-5 space-y-3">
+                  <div className="flex justify-between text-sm text-gray-600"><span>Subtotal</span><span>NPR {bill.subtotal.toLocaleString()}</span></div>
+                  <div className="flex justify-between text-sm text-gray-600"><span>VAT ({bill.vatRate}%)</span><span>NPR {bill.vatAmount.toLocaleString()}</span></div>
+                  <div className="border-t pt-3 flex justify-between font-bold text-lg"><span>Total</span><span>NPR {bill.total.toLocaleString()}</span></div>
+                  {!paymentQr && <p className="text-xs text-gray-400 text-center pt-2">Please pay at the counter or ask your cashier.</p>}
+                </div>
+
+                {paymentQr && bill.total > 0 && (
+                  <div className="bg-white rounded-xl border p-5 text-center">
+                    <p className="text-sm font-semibold text-gray-900">Pay from your table</p>
+                    <p className="text-xs text-gray-500 mt-1 mb-3">
+                      Scan with your eSewa / Khalti / banking app and pay{' '}
+                      <span className="font-semibold text-gray-900">NPR {bill.total.toLocaleString()}</span>
+                    </p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={paymentQr} alt="Payment QR"
+                      className="w-44 h-44 mx-auto rounded-lg border object-contain bg-white" />
+                    <button onClick={claimPaid} disabled={paidClaimed}
+                      className="mt-4 w-full py-3 rounded-xl font-semibold text-white bg-[var(--primary,#E85D04)] disabled:opacity-70">
+                      {paidClaimed ? <span className="inline-flex items-center gap-1.5 justify-center"><Check size={16} /> Cashier notified — they&rsquo;ll confirm shortly</span> : "I've paid"}
+                    </button>
+                    <p className="text-[11px] text-gray-400 mt-2">The cashier verifies the payment before closing your table.</p>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-gray-400 text-sm text-center py-12">No bill yet.</p>

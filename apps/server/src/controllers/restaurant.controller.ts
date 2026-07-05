@@ -8,12 +8,20 @@ import { sealSecret } from '../utils/secretBox';
 export async function getPublicBranding(req: AuthRequest, res: Response): Promise<void> {
   const slug = String(req.params.slug || '').toLowerCase().trim();
   const restaurant = await Restaurant.findOne({ slug })
-    .select('slug name branding subscription.status')
+    .select('slug name branding subscription.status settings.paymentQrUrl')
     .lean();
   if (!restaurant || restaurant.subscription.status === 'blocked') {
     throw new AppError('Restaurant not found', 404);
   }
-  res.json({ success: true, slug: restaurant.slug, name: restaurant.name, branding: restaurant.branding });
+  res.json({
+    success: true,
+    slug: restaurant.slug,
+    name: restaurant.name,
+    branding: restaurant.branding,
+    // Static merchant QR shown on the guest's bill screen — it's public by
+    // nature (the same QR stands on the front desk)
+    paymentQrUrl: restaurant.settings?.paymentQrUrl || undefined,
+  });
 }
 
 // GET /api/restaurant/me
@@ -58,6 +66,19 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
   const allowed = ['currency','vatRate','timezone','allowGuestNotes','autoCloseAfterMinutes'];
   const update: Record<string, unknown> = {};
   allowed.forEach((k) => { if (req.body[k] !== undefined) update[`settings.${k}`] = req.body[k]; });
+
+  if (req.body.paymentQrUrl !== undefined) {
+    const url = req.body.paymentQrUrl;
+    // Hosted URLs are short; inline data:image URIs of a QR run tens of KB
+    if (typeof url !== 'string' || url.length > 100_000) {
+      throw new AppError('paymentQrUrl must be a string (max 100 KB)', 400);
+    }
+    const trimmed = url.trim();
+    if (trimmed && !/^(https?:\/\/|data:image\/)/.test(trimmed)) {
+      throw new AppError('paymentQrUrl must be an http(s) or data:image URL', 400);
+    }
+    update['settings.paymentQrUrl'] = trimmed;
+  }
 
   // AI settings: provider + write-only keys (empty string clears a key)
   const ai = req.body.ai;

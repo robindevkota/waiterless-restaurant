@@ -6,16 +6,17 @@ Order within each stage = priority. `[ ]` pending · `[~]` in progress · `[x]` 
 ---
 
 ## ⏭ NEXT SESSION — in this order
-1. [ ] **Static payment QR on bill screen + "I've paid" signal** (see Stage 4
-      payments plan — v1/v1.5; sells the payment story without merchant APIs)
-2. [ ] **Menu item photos** (Cloudinary installed, creds empty — or accept image
+1. [ ] **Menu item photos** (Cloudinary installed, creds empty — or accept image
       URLs like the logo does; biggest perceived-value jump in the guest portal)
-3. [ ] **Inventory ROI analytics** (last Royal Suites v2 piece) — COGS vs revenue
+2. [ ] **Inventory ROI analytics** (last Royal Suites v2 piece) — COGS vs revenue
       per dish over time, waste cost from stocktake variances.
-4. [ ] **Needs the user's accounts**: own Atlas cluster (migrate off the borrowed
+3. [ ] **Needs the user's accounts**: own Atlas cluster (migrate off the borrowed
       HeloSarkar one via mongodump/mongorestore) + fresh project-owned Groq/Gemini
       keys.
-5. [ ] Or: remaining test gaps (cashier bill math — top of TESTING.md list) / CI.
+4. [ ] Or: remaining test gaps (cashier bill math — top of TESTING.md list) / CI.
+
+Done 2026-07-05 (late): static payment QR + "I've paid" signal (ROADMAP Phase 13),
+suite grew to 38/38.
 
 Done 2026-07-05 (see ROADMAP Phases 10–11): git init + initial commit, JWT secrets
 rotated (+ SECRETBOX_KEY), test tenants deleted, smart upsell chips + dashboard
@@ -58,12 +59,10 @@ Excel/CSV paste import.
 - [ ] **Payments (Nepal-reality plan, decided 2026-07-05)** — most clients only
       have a *static* merchant QR on a stand; confirmation is manual either way.
       So: NOT building checkout APIs now.
-      - [ ] v1 **Static QR on the bill screen**: owner uploads their merchant QR
-            in Settings (like the logo) → guest's bill view shows it with the
-            amount + "pay, then show the cashier". Zero payment infra, pure UX.
-      - [ ] v1.5 **"I've paid" signal**: guest taps after paying → cashier floor
-            flags the table "claims paid — verify" → cashier settles with the
-            method pre-filled. Human verification stays.
+      - [x] v1 **Static QR on the bill screen** ✅ shipped 2026-07-05 (ROADMAP
+            Phase 13) — Settings → Payments card, QR + amount on the guest bill.
+      - [x] v1.5 **"I've paid" signal** ✅ shipped 2026-07-05 — advisory flag,
+            cashier floor banner "claims paid — verify", settle stays cashier-only.
       - [ ] v2 **Dynamic QR adapter** — only when a client has merchant API
             access (FonePay dynamic / eSewa ePay / Khalti KPG). Per-tenant creds
             via the same AES-sealed settings pattern as AI keys.

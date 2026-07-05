@@ -9,6 +9,7 @@ import {
   getSession,
   closeSession,
   callWaiter,
+  claimPaid,
   submitFeedback,
   attendTable,
 } from '../controllers/session.controller';
@@ -17,6 +18,7 @@ const router = Router();
 
 // Guest routes (QR token) — must be registered before the staff middleware
 router.post('/my/call-waiter', authenticateGuest, tenantStatusGuard, callWaiter);
+router.post('/my/claim-paid', authenticateGuest, tenantStatusGuard, claimPaid);
 router.post('/my/feedback', authenticateGuest, tenantStatusGuard, submitFeedback);
 
 // Staff routes

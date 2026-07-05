@@ -15,6 +15,10 @@ export interface ITableSession extends Document {
   rating?: number;      // 1-5, guest feedback after payment
   feedback?: string;
   ratedAt?: Date;
+  // Guest tapped "I've paid" — advisory only; the cashier verifies on their
+  // merchant app and settles. Never flips bill status by itself.
+  paidClaimedAt?: Date;
+  paidClaimAmount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +38,8 @@ const TableSessionSchema = new Schema<ITableSession>(
     rating:       { type: Number, min: 1, max: 5 },
     feedback:     { type: String, maxlength: 500, trim: true },
     ratedAt:      { type: Date },
+    paidClaimedAt:   { type: Date },
+    paidClaimAmount: { type: Number },
   },
   { timestamps: true }
 );

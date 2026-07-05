@@ -18,5 +18,11 @@ export async function myBill(req: AuthRequest, res: Response): Promise<void> {
   const { sessionId, restaurantId } = req.guestPayload!;
   const bill = await Bill.findOne({ sessionId, restaurantId }).lean();
   if (!bill) throw new AppError('Bill not found', 404);
-  res.json({ success: true, bill });
+
+  // Merchant payment QR travels with the bill so the guest can pay from the
+  // table (always fresh — the SSR branding payload is cached for 60s)
+  const { default: Restaurant } = await import('../models/Restaurant');
+  const restaurant = await Restaurant.findById(restaurantId).select('settings.paymentQrUrl').lean();
+
+  res.json({ success: true, bill, paymentQrUrl: restaurant?.settings?.paymentQrUrl || undefined });
 }

@@ -5,12 +5,15 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { getSocket } from '@/lib/socket';
-import { BellRing } from 'lucide-react';
+import { BellRing, BadgeCheck } from 'lucide-react';
 
 interface WaiterCall { sessionId: string; tableId: string; tableLabel: string; at: string }
 
 interface Table { _id: string; label: string; capacity: number; status: string; currentSessionId: string | { _id: string } | null; }
-interface Session { _id: string; tableId: { _id: string; label: string }; openedAt: string; guestCount?: number; }
+interface Session {
+  _id: string; tableId: { _id: string; label: string }; openedAt: string; guestCount?: number;
+  paidClaimedAt?: string; paidClaimAmount?: number;
+}
 interface OrderSummary { _id: string; status: string; items: { name: string; qty: number; status: string }[]; }
 
 export default function FloorPage() {
@@ -47,8 +50,15 @@ export default function FloorPage() {
       load();
     };
     socket.on('waiter:called', onCall);
-    return () => { socket.off('waiter:called', onCall); };
+    // Paid-claims render from session state (survives reload); the socket
+    // event just refreshes the list instantly.
+    const onPaidClaim = () => load();
+    socket.on('payment:claimed', onPaidClaim);
+    return () => { socket.off('waiter:called', onCall); socket.off('payment:claimed', onPaidClaim); };
   }, [accessToken, authLoading, load]);
+
+  // Open sessions where the guest tapped "I've paid" — cashier must verify
+  const paidClaims = activeSessions.filter((s) => s.paidClaimedAt);
 
   async function attend(call: WaiterCall) {
     setWaiterCalls((prev) => prev.filter((c) => c.tableId !== call.tableId));
@@ -119,6 +129,29 @@ export default function FloorPage() {
       <div className="flex-1">
         <h1 className="text-xl font-bold text-gray-900 mb-4">Floor</h1>
 
+        {/* Paid-claim alerts — verify in the merchant app, then settle */}
+        {paidClaims.length > 0 && (
+          <div className="mb-4 space-y-2">
+            {paidClaims.map((s) => (
+              <div key={s._id} className="flex items-center justify-between gap-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3">
+                <p className="inline-flex items-center gap-2 text-sm font-semibold text-green-800">
+                  <BadgeCheck size={16} /> {s.tableId.label} claims paid
+                  {typeof s.paidClaimAmount === 'number' && s.paidClaimAmount > 0 && (
+                    <span className="font-bold">NPR {s.paidClaimAmount.toLocaleString()}</span>
+                  )}
+                  <span className="font-normal text-green-600 text-xs">
+                    check your merchant app · {s.paidClaimedAt ? new Date(s.paidClaimedAt).toLocaleTimeString() : ''}
+                  </span>
+                </p>
+                <Button size="sm" onClick={() => {
+                  const table = tables.find((t) => t._id === s.tableId._id);
+                  if (table) selectTable(table);
+                }}>Verify &amp; settle</Button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Waiter call alerts */}
         {waiterCalls.length > 0 && (
           <div className="mb-4 space-y-2">
@@ -148,6 +181,11 @@ export default function FloorPage() {
                 </div>
                 <p className="text-xs text-gray-400">Seats {t.capacity}</p>
                 {session && <p className="text-xs text-orange-600 mt-1">Open since {new Date(session.openedAt).toLocaleTimeString()}</p>}
+                {session?.paidClaimedAt && (
+                  <p className="text-xs font-semibold text-green-700 mt-1 inline-flex items-center gap-1">
+                    <BadgeCheck size={12} /> claims paid — verify
+                  </p>
+                )}
               </button>
             );
           })}

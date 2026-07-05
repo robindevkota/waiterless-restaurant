@@ -35,6 +35,40 @@ export async function callWaiter(req: AuthRequest, res: Response): Promise<void>
   res.json({ success: true, message: alreadyCalled ? 'Staff already notified' : 'Staff notified' });
 }
 
+// POST /api/sessions/my/claim-paid — guest says "I've paid" after scanning the
+// static merchant QR. Advisory only: flags the session for the cashier to
+// verify on their merchant app; never touches bill status.
+export async function claimPaid(req: AuthRequest, res: Response): Promise<void> {
+  const { sessionId, restaurantId } = req.guestPayload!;
+
+  const session = await TableSession.findOne({ _id: sessionId, restaurantId });
+  if (!session || session.status !== 'open') throw new AppError('Session is no longer active', 410);
+
+  const bill = await Bill.findOne({ sessionId }).lean();
+  const amount = bill?.total ?? 0;
+
+  // One notification per minute — repeated taps don't spam the floor
+  const recentlyClaimed = session.paidClaimedAt &&
+    Date.now() - session.paidClaimedAt.getTime() < 60_000;
+
+  session.paidClaimedAt = new Date();
+  session.paidClaimAmount = amount;
+  await session.save();
+
+  if (!recentlyClaimed) {
+    const table = await Table.findById(session.tableId).lean();
+    getIO().to(`cashier:${restaurantId}`).emit(SocketEvents.PAYMENT_CLAIMED, {
+      sessionId,
+      tableId: session.tableId,
+      tableLabel: table?.label ?? '',
+      amount,
+      at: session.paidClaimedAt.toISOString(),
+    });
+  }
+
+  res.json({ success: true, message: 'Cashier notified — they will confirm your payment shortly' });
+}
+
 // POST /api/sessions/my/feedback — guest rates the visit (works after close too)
 export async function submitFeedback(req: AuthRequest, res: Response): Promise<void> {
   const { sessionId, restaurantId } = req.guestPayload!;

@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/Input';
 interface AiView { provider: 'gemini' | 'groq'; hasGeminiKey: boolean; hasGroqKey: boolean }
 interface Settings {
   currency: string; vatRate: number; timezone: string;
-  allowGuestNotes: boolean; autoCloseAfterMinutes: number; ai: AiView;
+  allowGuestNotes: boolean; autoCloseAfterMinutes: number;
+  paymentQrUrl?: string; ai: AiView;
 }
 
 export default function SettingsPage() {
@@ -37,6 +38,7 @@ export default function SettingsPage() {
         timezone: settings.timezone,
         allowGuestNotes: settings.allowGuestNotes,
         autoCloseAfterMinutes: settings.autoCloseAfterMinutes,
+        paymentQrUrl: settings.paymentQrUrl ?? '',
         ai: {
           provider: settings.ai.provider,
           // keys are write-only: send only when the user typed something
@@ -81,6 +83,29 @@ export default function SettingsPage() {
             className="w-4 h-4 accent-orange-600" />
           Allow guests to add notes to orders
         </label>
+      </div>
+
+      <div className="bg-white dark:bg-[#131318] border dark:border-zinc-800 border-gray-200 dark:border-zinc-800 rounded-2xl p-6 mb-6">
+        <h2 className="font-semibold text-gray-800 dark:text-zinc-200 mb-1">Payments</h2>
+        <p className="text-sm text-gray-500 dark:text-zinc-300 mb-4">
+          Add your merchant payment QR (eSewa / Khalti / FonePay — the same one on your
+          front-desk stand). Guests see it on their bill screen and can pay from the table,
+          then tap &ldquo;I&rsquo;ve paid&rdquo; to notify the cashier. You still confirm
+          each payment in your merchant app before settling.
+        </p>
+        <div className="flex items-start gap-4">
+          <div className="flex-1">
+            <Input id="paymentQr" label="Payment QR image URL" value={settings.paymentQrUrl ?? ''}
+              placeholder="https://… (image of your merchant QR)"
+              onChange={(e) => setSettings({ ...settings, paymentQrUrl: e.target.value })} />
+            <p className="text-xs text-gray-400 dark:text-zinc-400 mt-2">Leave blank to hide the QR from the bill screen.</p>
+          </div>
+          {settings.paymentQrUrl?.trim() && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={settings.paymentQrUrl} alt="Payment QR preview"
+              className="w-24 h-24 rounded-lg border border-gray-200 dark:border-zinc-800 object-contain bg-white" />
+          )}
+        </div>
       </div>
 
       <div className="bg-white dark:bg-[#131318] border dark:border-zinc-800 border-gray-200 dark:border-zinc-800 rounded-2xl p-6 mb-6">

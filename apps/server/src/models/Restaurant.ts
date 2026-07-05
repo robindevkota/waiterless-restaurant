@@ -46,6 +46,7 @@ const SettingsSchema = new Schema<RestaurantSettings>({
   timezone:               { type: String, default: 'Asia/Kathmandu' },
   allowGuestNotes:        { type: Boolean, default: true },
   autoCloseAfterMinutes:  { type: Number, default: 180 },
+  paymentQrUrl:           { type: String },
   ai: {
     provider:     { type: String, enum: ['gemini', 'groq'], default: 'groq' },
     // Never leave the server: excluded from queries unless explicitly selected
