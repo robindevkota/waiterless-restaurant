@@ -6,17 +6,31 @@ Order within each stage = priority. `[ ]` pending · `[~]` in progress · `[x]` 
 ---
 
 ## ⏭ NEXT SESSION — in this order
-1. [ ] **Menu item photos** (Cloudinary installed, creds empty — or accept image
+1. [ ] **Floors/zones for tables** (decided 2026-07-05, ~half session) 🏢
+      - `zone` field on Table ("Ground floor", "First floor"…); labels stay
+        **unique across the restaurant** (G1–G10, F1–F10 — never duplicate
+        per-floor numbers: the label travels to KDS/TV/banners/receipts alone).
+      - Tables & QR page: zone field + "generate G1–G10" bulk helper.
+      - Floor + Payments pages: zone filter tabs (`All | Ground | First`),
+        choice persisted per device (localStorage) — one cashier per floor.
+        **"All" always shows the combined queue with counts** — filter
+        attention, never visibility (break coverage must work).
+      - Soft filter only; NO hard cashier→floor assignment or per-floor socket
+        rooms until a 3+ floor customer asks.
+      - KDS/TV/alert banners show `zone · label`; later: revenue-by-zone in
+        reports/AI snapshot. Note: 20 tables = Pro plan (upsell story).
+2. [ ] **Menu item photos** (Cloudinary installed, creds empty — or accept image
       URLs like the logo does; biggest perceived-value jump in the guest portal)
-2. [ ] **Inventory ROI analytics** (last Royal Suites v2 piece) — COGS vs revenue
+3. [ ] **Inventory ROI analytics** (last Royal Suites v2 piece) — COGS vs revenue
       per dish over time, waste cost from stocktake variances.
-3. [ ] **Needs the user's accounts**: own Atlas cluster (migrate off the borrowed
+4. [ ] **Needs the user's accounts**: own Atlas cluster (migrate off the borrowed
       HeloSarkar one via mongodump/mongorestore) + fresh project-owned Groq/Gemini
       keys.
-4. [ ] Or: remaining test gaps (cashier bill math — top of TESTING.md list) / CI.
+5. [ ] Or: remaining test gaps (auto-86 cycle is now top of TESTING.md list) / CI.
 
-Done 2026-07-05 (late): static payment QR + "I've paid" signal (ROADMAP Phase 13),
-suite grew to 38/38.
+Done 2026-07-05 (late): static payment QR + "I've paid" signal, cashier dismiss,
+Payments workspace (pending queue + paid history, side-by-side), live floor bill
+(ROADMAP Phase 13) — suite grew to 41/41.
 
 Done 2026-07-05 (see ROADMAP Phases 10–11): git init + initial commit, JWT secrets
 rotated (+ SECRETBOX_KEY), test tenants deleted, smart upsell chips + dashboard
