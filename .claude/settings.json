@@ -3,7 +3,20 @@
     "allow": [
       "Bash(curl -s -o /dev/null -w \"api:%{http_code} \" http://localhost:5000/api/health)",
       "Bash(curl -s -o /dev/null -w \"web:%{http_code}\\\\n\" http://localhost:3001)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('for',j.weekday,j.forDate,'counts',JSON.stringify\\(j.counts\\)\\);console.log\\('items:',j.items.map\\(i=>i.name+' x'+i.forecastQty+' \\('+i.daysSeen+'d\\)'\\).join\\(' | '\\)\\);console.log\\('shortfalls:',j.ingredients.filter\\(i=>i.shortfall>0\\).map\\(i=>i.name+' need '+i.required+i.unit+' have '+i.stock+' short '+i.shortfall\\).join\\(' | '\\)||'none'\\)}\\)\")",
+      "Bash(curl -s -X POST http://localhost:5000/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"kitchen@goldenfork.com\",\"password\":\"Owner@1234\"}')",
+      "Bash(npm ls *)",
+      "Bash(npm i *)",
+      "Bash(node verify-prep.js)",
+      "Bash(node verify-kds.js)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);['Ginger','Mutton'].forEach\\(n=>{const m=j.ingredients.find\\(i=>i.name===n\\);console.log\\(n, m?m.stock+m.unit+' cost'+m.costPrice:'MISSING'\\)}\\)}\\)\")",
+      "Bash(node verify-v2.js)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{JSON.parse\\(d\\).logs.forEach\\(l=>console.log\\(l.type, l.ingredientId?.name, l.qty, '→', l.stockAfter, l.note||''\\)\\)}\\)\")",
+      "Bash(node verify-import.js)",
+      "Bash(git commit -q -m 'Tomorrow'\\\\''s prep list + inventory v2 \\(stocktake, CSV import\\) *)"
     ]
   }
 }

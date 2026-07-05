@@ -6,16 +6,17 @@ Order within each stage = priority. `[ ]` pending · `[~]` in progress · `[x]` 
 ---
 
 ## ⏭ NEXT SESSION — in this order
-1. [ ] **Tomorrow's prep list** — per-item weekday demand forecast for the
-      kitchen; ties into inventory (suggest restock quantities).
-2. [ ] **Inventory v2** (if time) — Excel import, stocktake/variance, ROI
-      analytics from the Royal Suites spec.
-3. [ ] **Needs the user's accounts**: own Atlas cluster (migrate off the borrowed
+1. [ ] **Needs the user's accounts**: own Atlas cluster (migrate off the borrowed
       HeloSarkar one via mongodump/mongorestore) + fresh project-owned Groq/Gemini
       keys.
+2. [ ] **Inventory ROI analytics** (last Royal Suites v2 piece) — COGS vs revenue
+      per dish over time, waste cost from stocktake variances.
+3. [ ] Or pick from Stage 2 (tests + CI) / feature backlog below.
 
-Done 2026-07-05 (see ROADMAP Phase 10): git init + initial commit, JWT secrets
-rotated (+ SECRETBOX_KEY), test tenants deleted, smart upsell chips + dashboard stat.
+Done 2026-07-05 (see ROADMAP Phases 10–11): git init + initial commit, JWT secrets
+rotated (+ SECRETBOX_KEY), test tenants deleted, smart upsell chips + dashboard
+stat, tomorrow's prep list (owner tab + KDS drawer), stocktake with variance log,
+Excel/CSV paste import.
 
 ---
 
@@ -61,13 +62,13 @@ rotated (+ SECRETBOX_KEY), test tenants deleted, smart upsell chips + dashboard 
       2026-07-05 — see ROADMAP Phase 8.
 - [x] **Smart upsell in guest portal** 💰 ✅ shipped 2026-07-05 — see ROADMAP
       Phase 10. Co-occurrence chips in cart + "Upsells earned" dashboard tile.
-- [ ] **Tomorrow's prep list** — per-item demand forecast from weekday/history
-      ("expect ~45 momo plates Saturday"); page or card for kitchen; needs the
-      30-day+ history we already seed.
+- [x] **Tomorrow's prep list** ✅ shipped 2026-07-05 — see ROADMAP Phase 11.
+      Weekday forecast + shortfall shopping list; Inventory tab + KDS drawer.
 - [x] **TV mode** ✅ shipped 2026-07-05 — see ROADMAP Phase 9.
 - [x] **Rule-based inventory (port from Royal Suites — lighter v1)** ✅ shipped
-      2026-07-05 — see ROADMAP Phase 7. v2 remains open: Excel import,
-      stocktake/variance, ROI analytics. Original plan: (source:
+      2026-07-05 — see ROADMAP Phase 7. v2 also shipped 2026-07-05 (Phase 11):
+      Excel/CSV import + stocktake/variance. Only ROI analytics remains open.
+      Original plan: (source:
       `Desktop/Projects/Hotel reservation/royal-suites` (spec: `inventory-feature-spec.md`;
       models `Ingredient/Recipe/StockLog`, `inventory.service.ts` — same stack, proven).
       Adaptations required: (1) add `restaurantId` + tenant middleware to every model/route;

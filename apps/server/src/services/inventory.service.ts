@@ -221,6 +221,140 @@ export async function deductForOrder(
   await syncAutoAvailability(restaurantId);
 }
 
+// ── Stocktake: physical count wins, variance is logged ──────────────────────
+
+export async function stocktakeIngredient(
+  restaurantId: mongoose.Types.ObjectId | string,
+  ingredientId: string,
+  countedQty: number,
+  userId?: mongoose.Types.ObjectId,
+  note?: string
+) {
+  if (!(countedQty >= 0)) throw new AppError('countedQty must be >= 0', 400);
+  const prev = await Ingredient.findOneAndUpdate(
+    { _id: ingredientId, restaurantId, isActive: true },
+    { $set: { stock: countedQty } },
+    { new: false }
+  );
+  if (!prev) throw new AppError('Ingredient not found', 404);
+
+  const variance = Math.round((countedQty - prev.stock) * 1000) / 1000;
+  await StockLog.create({
+    restaurantId,
+    ingredientId,
+    type: 'adjustment',
+    qty: variance,
+    stockAfter: countedQty,
+    byUser: userId,
+    note: note || 'stocktake',
+  });
+
+  const { disabled, restored } = await syncAutoAvailability(restaurantId);
+  return { stock: countedQty, variance, disabledItems: disabled, restoredItems: restored };
+}
+
+// ── Tomorrow's prep list ─────────────────────────────────────────────────────
+// Rule-based weekday forecast: average of the same weekday over the last
+// 4 weeks (fixed divisor, so a dead Saturday counts as zero). Recipes turn the
+// dish forecast into ingredient requirements → restock shortfalls.
+
+const FORECAST_WEEKS = 4;
+
+export async function getPrepForecast(restaurantId: mongoose.Types.ObjectId | string) {
+  const rid = new mongoose.Types.ObjectId(String(restaurantId));
+  const { default: Restaurant } = await import('../models/Restaurant');
+  const { default: Order } = await import('../models/Order');
+  const restaurant = await Restaurant.findById(rid).select('settings.timezone').lean();
+  const tz = restaurant?.settings?.timezone || 'Asia/Kathmandu';
+
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const forDate = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(tomorrow);
+  const weekday = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'long' }).format(tomorrow);
+  // Mongo $dayOfWeek: 1=Sunday … 7=Saturday
+  const DOW: Record<string, number> = { Sun: 1, Mon: 2, Tue: 3, Wed: 4, Thu: 5, Fri: 6, Sat: 7 };
+  const targetDow = DOW[new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(tomorrow)];
+
+  // placedAt, not createdAt — the demo seed backdates placedAt while Mongoose
+  // stamps createdAt at insert time.
+  const since = new Date(Date.now() - FORECAST_WEEKS * 7 * 24 * 60 * 60 * 1000);
+  const agg = await Order.aggregate([
+    { $match: { restaurantId: rid, status: { $ne: 'cancelled' }, placedAt: { $gte: since } } },
+    { $addFields: { dow: { $dayOfWeek: { date: '$placedAt', timezone: tz } } } },
+    { $match: { dow: targetDow } },
+    { $unwind: '$items' },
+    { $match: { 'items.status': { $ne: 'cancelled' } } },
+    {
+      $group: {
+        _id: '$items.menuItemId',
+        totalQty: { $sum: '$items.qty' },
+        days: { $addToSet: { $dateToString: { format: '%Y-%m-%d', date: '$placedAt', timezone: tz } } },
+      },
+    },
+  ]);
+
+  const menuItems = await MenuItem.find({
+    _id: { $in: agg.map((a) => a._id) },
+    restaurantId: rid,
+    deleted: false,
+  }).select('name available recipe').lean();
+  const menuById = new Map(menuItems.map((m) => [String(m._id), m]));
+
+  const items = agg
+    .map((a) => {
+      const mi = menuById.get(String(a._id));
+      if (!mi) return null;
+      return {
+        menuItemId: String(a._id),
+        name: mi.name,
+        forecastQty: Math.ceil(a.totalQty / FORECAST_WEEKS),
+        daysSeen: a.days.length,
+        available: mi.available,
+        recipe: mi.recipe as { ingredientId: mongoose.Types.ObjectId; qtyPerServing: number }[],
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null && x.forecastQty > 0)
+    .sort((a, b) => b.forecastQty - a.forecastQty);
+
+  // Ingredient requirements = Σ forecast × qtyPerServing across all dishes
+  const required = new Map<string, number>();
+  for (const item of items) {
+    for (const line of item.recipe ?? []) {
+      const key = String(line.ingredientId);
+      required.set(key, (required.get(key) ?? 0) + line.qtyPerServing * item.forecastQty);
+    }
+  }
+  const ingredientDocs = required.size
+    ? await Ingredient.find({ _id: { $in: Array.from(required.keys()) }, restaurantId: rid, isActive: true }).lean()
+    : [];
+  const ingredients = ingredientDocs
+    .map((ing) => {
+      const need = Math.round(required.get(String(ing._id))! * 1000) / 1000;
+      const stock = Math.round(ing.stock * 1000) / 1000;
+      return {
+        ingredientId: String(ing._id),
+        name: ing.name,
+        unit: ing.unit,
+        required: need,
+        stock,
+        shortfall: Math.max(0, Math.round((need - stock) * 1000) / 1000),
+      };
+    })
+    .sort((a, b) => b.shortfall - a.shortfall || b.required - a.required);
+
+  return {
+    forDate,
+    weekday,
+    basedOnWeeks: FORECAST_WEEKS,
+    items: items.map(({ recipe: _recipe, ...rest }) => rest),
+    ingredients,
+    counts: {
+      dishes: items.length,
+      totalPlates: items.reduce((s, i) => s + i.forecastQty, 0),
+      shortfalls: ingredients.filter((i) => i.shortfall > 0).length,
+    },
+  };
+}
+
 // ── Restock ──────────────────────────────────────────────────────────────────
 
 export async function restockIngredient(

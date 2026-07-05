@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Pagination } from '@/components/ui/Pagination';
 import { fmtMoney } from '@/components/charts';
-import { Package, PackagePlus, AlertTriangle, XCircle, UtensilsCrossed, Plus, Trash2, Pencil, X } from 'lucide-react';
+import { Package, PackagePlus, AlertTriangle, XCircle, UtensilsCrossed, Plus, Trash2, Pencil, X, CalendarClock, ShoppingBasket, ClipboardCheck, FileSpreadsheet } from 'lucide-react';
 
 /* ── types ──────────────────────────────────────────────────────────── */
 
@@ -29,6 +29,12 @@ interface LogEntry {
   ingredientId: { name: string; unit: string } | null; byUser?: { name: string } | null;
 }
 interface RecipeLine { ingredientId: string; qtyPerServing: number }
+interface Prep {
+  forDate: string; weekday: string; basedOnWeeks: number;
+  items: { menuItemId: string; name: string; forecastQty: number; daysSeen: number; available: boolean }[];
+  ingredients: { ingredientId: string; name: string; unit: string; required: number; stock: number; shortfall: number }[];
+  counts: { dishes: number; totalPlates: number; shortfalls: number };
+}
 
 const UNITS = ['kg', 'g', 'litre', 'ml', 'piece', 'packet', 'bottle'];
 const CARD = 'bg-white dark:bg-[#131318] border border-black/[0.06] dark:border-white/[0.07] rounded-2xl shadow-sm';
@@ -67,7 +73,8 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 export default function InventoryPage() {
   const { accessToken, loading: authLoading } = useAuthStore();
   const [data, setData] = useState<Overview | null>(null);
-  const [tab, setTab] = useState<'dishes' | 'ingredients' | 'log'>('dishes');
+  const [tab, setTab] = useState<'dishes' | 'ingredients' | 'log' | 'prep'>('dishes');
+  const [prep, setPrep] = useState<Prep | null>(null);
   const [logsState, setLogsState] = useState<{ entries: LogEntry[]; page: number; pages: number; total: number }>({ entries: [], page: 1, pages: 1, total: 0 });
   const [error, setError] = useState('');
 
@@ -75,6 +82,8 @@ export default function InventoryPage() {
   const [ingModal, setIngModal] = useState<{ mode: 'create' } | { mode: 'edit'; ing: Ing } | null>(null);
   const [restockModal, setRestockModal] = useState<Ing | null>(null);
   const [recipeModal, setRecipeModal] = useState<Dish | null>(null);
+  const [stocktakeModal, setStocktakeModal] = useState<Ing | null>(null);
+  const [importModal, setImportModal] = useState(false);
 
   const load = useCallback(() => {
     if (!accessToken) return;
@@ -91,6 +100,10 @@ export default function InventoryPage() {
 
   useEffect(() => { if (!authLoading) load(); }, [authLoading, load]);
   useEffect(() => { if (tab === 'log') loadLogs(1); }, [tab, loadLogs]);
+  useEffect(() => {
+    if (tab !== 'prep' || !accessToken) return;
+    api.get<Prep>('/inventory/prep', accessToken).then(setPrep).catch(() => {});
+  }, [tab, accessToken]);
 
   const counts = data?.counts;
 
@@ -103,7 +116,10 @@ export default function InventoryPage() {
             Rule-based stock — every order deducts ingredients; dishes 86 themselves at zero
           </p>
         </div>
-        <Button onClick={() => setIngModal({ mode: 'create' })}><PackagePlus size={16} /> Add ingredient</Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setImportModal(true)}><FileSpreadsheet size={16} /> Import</Button>
+          <Button onClick={() => setIngModal({ mode: 'create' })}><PackagePlus size={16} /> Add ingredient</Button>
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/40 dark:text-red-400 rounded-lg px-4 py-3 mb-6">{error}</p>}
@@ -130,7 +146,7 @@ export default function InventoryPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5">
-        {([['dishes', 'Dishes'], ['ingredients', 'Ingredients'], ['log', 'Stock log']] as const).map(([t, label]) => (
+        {([['dishes', 'Dishes'], ['ingredients', 'Ingredients'], ['prep', "Tomorrow's prep"], ['log', 'Stock log']] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === t ? 'text-white shadow-sm' : 'bg-white dark:bg-[#131318] border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800/60'}`}
             style={tab === t ? { background: 'var(--brand, #ea580c)' } : undefined}>
@@ -212,6 +228,7 @@ export default function InventoryPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
                       <Button size="sm" onClick={() => setRestockModal(i)}><Plus size={13} /> Restock</Button>
+                      <Button size="sm" variant="secondary" aria-label="Stocktake" title="Stocktake — record a physical count" onClick={() => setStocktakeModal(i)}><ClipboardCheck size={13} /></Button>
                       <Button size="sm" variant="secondary" aria-label="Edit" onClick={() => setIngModal({ mode: 'edit', ing: i })}><Pencil size={13} /></Button>
                       <Button size="sm" variant="secondary" aria-label="Delete" onClick={async () => {
                         if (!confirm(`Delete "${i.name}"? It will also be removed from recipes.`)) return;
@@ -226,6 +243,85 @@ export default function InventoryPage() {
           </table>
           {!data?.ingredients.length && <p className="text-center py-10 text-gray-400 dark:text-zinc-400 text-sm">No ingredients yet — add your first one</p>}
         </div>
+      )}
+
+      {/* ── Tomorrow's prep tab ── */}
+      {tab === 'prep' && (
+        prep ? (
+          <div className="grid lg:grid-cols-2 gap-4 items-start">
+            <div className={`${CARD} overflow-hidden`}>
+              <div className="px-4 py-3.5 border-b border-gray-100 dark:border-zinc-800 flex items-center gap-2.5">
+                <CalendarClock size={17} className="text-gray-400 dark:text-zinc-400" />
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-zinc-100">Prep for {prep.weekday}, {prep.forDate}</p>
+                  <p className="text-xs text-gray-400 dark:text-zinc-400">
+                    Average of the last {prep.basedOnWeeks} {prep.weekday}s · ~{prep.counts.totalPlates} plates expected
+                  </p>
+                </div>
+              </div>
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
+                  {prep.items.map((p) => (
+                    <tr key={p.menuItemId} className="hover:bg-gray-50/70 dark:hover:bg-zinc-800/40">
+                      <td className="px-4 py-2.5">
+                        <span className="font-medium text-gray-900 dark:text-zinc-100">{p.name}</span>
+                        {!p.available && <span className="text-xs text-red-500 font-medium ml-2">currently 86’d</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <span className="font-bold tabular-nums text-gray-900 dark:text-zinc-100">{p.forecastQty}</span>
+                        <span className="text-xs text-gray-400 dark:text-zinc-400 ml-1">plates</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!prep.items.length && (
+                <p className="text-center py-10 text-gray-400 dark:text-zinc-400 text-sm">
+                  Not enough {prep.weekday} history yet — forecasts appear after a few weeks of orders
+                </p>
+              )}
+            </div>
+
+            <div className={`${CARD} overflow-hidden`}>
+              <div className="px-4 py-3.5 border-b border-gray-100 dark:border-zinc-800 flex items-center gap-2.5">
+                <ShoppingBasket size={17} className="text-gray-400 dark:text-zinc-400" />
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-zinc-100">Shopping list</p>
+                  <p className="text-xs text-gray-400 dark:text-zinc-400">
+                    {prep.counts.shortfalls
+                      ? `${prep.counts.shortfalls} ingredient${prep.counts.shortfalls === 1 ? '' : 's'} short for tomorrow`
+                      : 'Stock covers the whole forecast'}
+                  </p>
+                </div>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-zinc-900/60 border-b border-gray-100 dark:border-zinc-800">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 font-medium text-gray-600 dark:text-zinc-300">Ingredient</th>
+                    <th className="text-right px-4 py-2.5 font-medium text-gray-600 dark:text-zinc-300">Needed</th>
+                    <th className="text-right px-4 py-2.5 font-medium text-gray-600 dark:text-zinc-300">In stock</th>
+                    <th className="text-right px-4 py-2.5 font-medium text-gray-600 dark:text-zinc-300">Buy</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
+                  {prep.ingredients.map((i) => (
+                    <tr key={i.ingredientId} className={`hover:bg-gray-50/70 dark:hover:bg-zinc-800/40 ${i.shortfall > 0 ? 'bg-red-50/50 dark:bg-red-950/20' : ''}`}>
+                      <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-zinc-100">{i.name}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-gray-700 dark:text-zinc-300">{fmtQty(i.required)} {i.unit}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-gray-700 dark:text-zinc-300">{fmtQty(i.stock)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-semibold">
+                        {i.shortfall > 0
+                          ? <span className="text-red-600 dark:text-red-400">{fmtQty(i.shortfall)} {i.unit}</span>
+                          : <span className="text-green-600 dark:text-green-500">✓</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!prep.ingredients.length && <p className="text-center py-10 text-gray-400 dark:text-zinc-400 text-sm">No tracked recipes in the forecast yet</p>}
+            </div>
+          </div>
+        ) : <p className="text-sm text-gray-400 dark:text-zinc-400 py-8 text-center">Loading forecast…</p>
       )}
 
       {/* ── Log tab ── */}
@@ -276,6 +372,12 @@ export default function InventoryPage() {
       )}
       {recipeModal && data && (
         <RecipeModal dish={recipeModal} ingredients={data.ingredients} token={accessToken ?? ''} onClose={() => setRecipeModal(null)} onSaved={() => { setRecipeModal(null); load(); }} />
+      )}
+      {stocktakeModal && (
+        <StocktakeModal ing={stocktakeModal} token={accessToken ?? ''} onClose={() => setStocktakeModal(null)} onSaved={() => { setStocktakeModal(null); load(); }} />
+      )}
+      {importModal && (
+        <ImportModal token={accessToken ?? ''} onClose={() => setImportModal(false)} onSaved={() => { setImportModal(false); load(); }} />
       )}
     </div>
   );
@@ -381,6 +483,113 @@ function RestockModal({ ing, token, onClose, onSaved }: { ing: Ing; token: strin
           </p>
         )}
         <Button onClick={save} loading={saving} disabled={!qty || Number(qty) <= 0}>Add stock</Button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ── Stocktake modal ─────────────────────────────────────────────────── */
+
+function StocktakeModal({ ing, token, onClose, onSaved }: { ing: Ing; token: string; onClose: () => void; onSaved: () => void }) {
+  const [counted, setCounted] = useState('');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const variance = counted === '' ? null : Math.round((Number(counted) - ing.stock) * 1000) / 1000;
+
+  async function save() {
+    setSaving(true); setErr('');
+    try {
+      await api.post(`/inventory/ingredients/${ing._id}/stocktake`, { countedQty: Number(counted), note: note || undefined }, token);
+      onSaved();
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Stocktake failed'); setSaving(false); }
+  }
+
+  return (
+    <Modal title={`Stocktake — ${ing.name}`} onClose={onClose}>
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-gray-500 dark:text-zinc-400">
+          System says <span className="font-semibold text-gray-900 dark:text-zinc-100">{fmtQty(ing.stock)} {ing.unit}</span>.
+          Enter what you actually counted — the physical count wins and the variance is logged.
+        </p>
+        <Input label={`Counted quantity (${ing.unit})`} type="number" min={0} value={counted} onChange={(e) => setCounted(e.target.value)} autoFocus />
+        {variance !== null && Number.isFinite(variance) && (
+          <p className={`text-sm rounded-lg px-3 py-2 ${variance === 0
+            ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-500/10'
+            : variance < 0
+              ? 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10'
+              : 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10'}`}>
+            {variance === 0 ? '✓ Matches the system — no variance'
+              : variance < 0 ? `Variance ${fmtQty(variance)} ${ing.unit} — waste, spillage or unlogged use`
+              : `Variance +${fmtQty(variance)} ${ing.unit} — more on hand than recorded`}
+          </p>
+        )}
+        <Input label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. weekly count" />
+        {err && <p className="text-sm text-red-600">{err}</p>}
+        <Button onClick={save} loading={saving} disabled={counted === '' || Number(counted) < 0}>Record count</Button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ── CSV / Excel-paste import modal ──────────────────────────────────── */
+
+function ImportModal({ token, onClose, onSaved }: { token: string; onClose: () => void; onSaved: () => void }) {
+  const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const [result, setResult] = useState<{ created: number; updated: number; errors: { row: number; message: string }[] } | null>(null);
+
+  function parseRows() {
+    return text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .filter((l, i) => !(i === 0 && /name/i.test(l.split(/[\t,]/)[0]))) // skip header row
+      .map((l) => {
+        const [name, unit, stock, costPrice, lowStockThreshold, category] = l.split(/[\t,]/).map((c) => c.trim());
+        return { name, unit, stock, costPrice, lowStockThreshold, category };
+      });
+  }
+
+  async function save() {
+    setSaving(true); setErr(''); setResult(null);
+    try {
+      const rows = parseRows();
+      if (!rows.length) throw new Error('Nothing to import');
+      const d = await api.post<{ created: number; updated: number; errors: { row: number; message: string }[] }>(
+        '/inventory/ingredients/import', { rows }, token
+      );
+      setResult(d);
+      if (!d.errors.length) setTimeout(onSaved, 1400);
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Import failed'); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title="Import ingredients" onClose={onClose}>
+      <div className="flex flex-col gap-4">
+        <p className="text-xs text-gray-400 dark:text-zinc-400">
+          Paste rows from Excel/Sheets (or type CSV) — one ingredient per line:<br />
+          <code className="text-[11px] bg-gray-100 dark:bg-zinc-800 rounded px-1.5 py-0.5">name, unit, stock, cost price, low-stock alert, category</code><br />
+          Existing names get updated (stock becomes a logged stocktake); new names are created.
+        </p>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={8}
+          placeholder={'Chicken keema\tkg\t8\t480\t2\tkitchen\nMasala mix\tpacket\t12\t90\t4\tkitchen'}
+          className="border border-gray-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-zinc-900 text-gray-900 dark:text-zinc-100 resize-y"
+        />
+        {err && <p className="text-sm text-red-600">{err}</p>}
+        {result && (
+          <div className={`text-sm rounded-lg px-3 py-2 ${result.errors.length ? 'text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10' : 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-500/10'}`}>
+            <p>✓ {result.created} created · {result.updated} updated{result.errors.length ? ` · ${result.errors.length} rows skipped:` : ''}</p>
+            {result.errors.slice(0, 5).map((e) => <p key={e.row} className="text-xs mt-0.5">row {e.row}: {e.message}</p>)}
+          </div>
+        )}
+        <Button onClick={save} loading={saving} disabled={!text.trim()}>Import</Button>
       </div>
     </Modal>
   );

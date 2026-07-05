@@ -5,7 +5,7 @@ import { AppError } from '../middleware/errorHandler';
 import Ingredient from '../models/Ingredient';
 import MenuItem from '../models/MenuItem';
 import StockLog from '../models/StockLog';
-import { getInventoryOverview, restockIngredient, syncAutoAvailability } from '../services/inventory.service';
+import { getInventoryOverview, getPrepForecast, restockIngredient, stocktakeIngredient, syncAutoAvailability } from '../services/inventory.service';
 
 const UNITS = ['kg', 'g', 'litre', 'ml', 'piece', 'packet', 'bottle'];
 const CATEGORIES = ['kitchen', 'bar', 'general'];
@@ -17,6 +17,12 @@ function rid(req: AuthRequest): string {
 // GET /api/inventory/overview
 export async function overview(req: AuthRequest, res: Response): Promise<void> {
   const data = await getInventoryOverview(rid(req));
+  res.json({ success: true, ...data });
+}
+
+// GET /api/inventory/prep — tomorrow's prep list (kitchen + owner)
+export async function prepForecast(req: AuthRequest, res: Response): Promise<void> {
+  const data = await getPrepForecast(rid(req));
   res.json({ success: true, ...data });
 }
 
@@ -95,6 +101,74 @@ export async function restock(req: AuthRequest, res: Response): Promise<void> {
     rid(req), req.params.id, qty, req.user?._id as mongoose.Types.ObjectId, req.body.note
   );
   res.json({ success: true, ingredient, restoredItems });
+}
+
+// POST /api/inventory/ingredients/:id/stocktake — physical count wins
+export async function stocktake(req: AuthRequest, res: Response): Promise<void> {
+  const countedQty = Number(req.body.countedQty);
+  if (!Number.isFinite(countedQty) || countedQty < 0) throw new AppError('countedQty must be a number >= 0', 400);
+  const result = await stocktakeIngredient(
+    rid(req), req.params.id, countedQty, req.user?._id as mongoose.Types.ObjectId, req.body.note
+  );
+  res.json({ success: true, ...result });
+}
+
+// POST /api/inventory/ingredients/import — bulk rows pasted from Excel/CSV.
+// Upserts by name: existing ingredients get fields updated + a stocktake to
+// the imported qty; new ones are created.
+export async function importIngredients(req: AuthRequest, res: Response): Promise<void> {
+  const { rows } = req.body as { rows: unknown };
+  if (!Array.isArray(rows) || rows.length === 0) throw new AppError('rows array is required', 400);
+  if (rows.length > 200) throw new AppError('Max 200 rows per import', 400);
+
+  let created = 0;
+  let updated = 0;
+  const errors: { row: number; message: string }[] = [];
+
+  for (let idx = 0; idx < rows.length; idx++) {
+    const r = rows[idx] as Record<string, unknown>;
+    try {
+      const name = String(r.name ?? '').trim();
+      const unit = String(r.unit ?? '').trim().toLowerCase();
+      const stock = r.stock === undefined || r.stock === '' ? undefined : Number(r.stock);
+      const costPrice = Number(r.costPrice);
+      const lowStockThreshold = r.lowStockThreshold === undefined || r.lowStockThreshold === '' ? 0 : Number(r.lowStockThreshold);
+      const category = r.category ? String(r.category).trim().toLowerCase() : 'kitchen';
+
+      if (!name) throw new Error('name is required');
+      if (!UNITS.includes(unit)) throw new Error(`unit must be one of: ${UNITS.join(', ')}`);
+      if (!Number.isFinite(costPrice) || costPrice < 0) throw new Error('costPrice must be a number >= 0');
+      if (stock !== undefined && (!Number.isFinite(stock) || stock < 0)) throw new Error('stock must be >= 0');
+      if (!CATEGORIES.includes(category)) throw new Error(`category must be one of: ${CATEGORIES.join(', ')}`);
+      if (!Number.isFinite(lowStockThreshold) || lowStockThreshold < 0) throw new Error('lowStockThreshold must be >= 0');
+
+      const existing = await Ingredient.findOne({ restaurantId: rid(req), name });
+      if (existing) {
+        existing.set({ unit, costPrice, lowStockThreshold, category, isActive: true });
+        await existing.save();
+        if (stock !== undefined && stock !== existing.stock) {
+          await stocktakeIngredient(rid(req), String(existing._id), stock, req.user?._id as mongoose.Types.ObjectId, 'CSV import');
+        }
+        updated++;
+      } else {
+        const ing = await Ingredient.create({
+          restaurantId: rid(req), name, unit, stock: stock ?? 0, costPrice, lowStockThreshold, category,
+        });
+        if ((stock ?? 0) > 0) {
+          await StockLog.create({
+            restaurantId: rid(req), ingredientId: ing._id,
+            type: 'adjustment', qty: stock, stockAfter: stock, byUser: req.user?._id, note: 'CSV import',
+          });
+        }
+        created++;
+      }
+    } catch (e) {
+      errors.push({ row: idx + 1, message: e instanceof Error ? e.message : 'Invalid row' });
+    }
+  }
+
+  await syncAutoAvailability(rid(req));
+  res.json({ success: true, created, updated, errors });
 }
 
 // PUT /api/inventory/recipes/:menuItemId — set recipe lines for a menu item

@@ -151,6 +151,25 @@ Ported (lighter v1) from the Royal Suites spec; pure arithmetic, no AI.
       Dal Bhat Set/Lassi/Chicken Thali (83/76/76 shared sessions), Lassi added via
       chip → order stored `viaUpsell: true` → NPR 120 on the dashboard tile.
 
+## Phase 11 — Tomorrow's prep list + inventory v2 ✅ (2026-07-05)
+- [x] **Prep forecast** `GET /api/inventory/prep` (kitchen + owner; the rest of
+      /inventory stays owner-only): average of the same weekday over the last
+      4 weeks (fixed divisor so quiet days count), restaurant timezone, based on
+      `placedAt` (seed backdates it; `createdAt` is stamped at insert). Recipes
+      turn plate forecasts into ingredient requirements → shortfall shopping list.
+- [x] UI: "Tomorrow's prep" tab on Inventory (plates per dish + shopping list
+      with red Buy column) and a prep drawer on the kitchen KDS ("Short for
+      tomorrow" alerts). Verified in browser for both roles; kitchen blocked
+      from owner-only inventory routes (403).
+- [x] **Stocktake**: `POST /inventory/ingredients/:id/stocktake` — physical
+      count wins, variance logged as adjustment, auto-86/restore synced;
+      modal shows live variance preview (waste vs surplus). Cross-tenant → 404.
+- [x] **Excel/CSV paste import**: `POST /inventory/ingredients/import` — up to
+      200 rows (name, unit, stock, cost, threshold, category), upsert by name
+      (existing → field update + logged stocktake), row-level error reporting.
+      Verified through the modal: pasted tab-separated rows → "2 created".
+- Still open from the Royal Suites spec: ROI analytics (COGS vs revenue trend).
+
 ## Backlog
 Moved to **`BACKLOG.md`** (single source of truth for pending work, including the
 production-readiness checklist). This file keeps only shipped phases + decisions.
