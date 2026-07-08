@@ -91,3 +91,4 @@ waiterless-restaurant/
 │       └── components/      AuthGuard, ui/Button, Input, Badge
 └── packages/types/          shared TypeScript types
 ```
+# waiterless-restaurant
