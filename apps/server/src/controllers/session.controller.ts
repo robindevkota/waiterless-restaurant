@@ -28,6 +28,7 @@ export async function callWaiter(req: AuthRequest, res: Response): Promise<void>
       sessionId,
       tableId: table._id,
       tableLabel: table.label,
+      zone: table.zone || '',
       at: new Date().toISOString(),
     });
   }
@@ -61,6 +62,7 @@ export async function claimPaid(req: AuthRequest, res: Response): Promise<void> 
       sessionId,
       tableId: session.tableId,
       tableLabel: table?.label ?? '',
+      zone: table?.zone ?? '',
       amount,
       at: session.paidClaimedAt.toISOString(),
     });
@@ -160,7 +162,7 @@ export async function openSession(req: AuthRequest, res: Response): Promise<void
 export async function listActiveSessions(req: AuthRequest, res: Response): Promise<void> {
   const rid = (req as any).restaurantId;
   const sessions = await TableSession.find({ restaurantId: rid, status: 'open' })
-    .populate('tableId', 'label capacity')
+    .populate('tableId', 'label zone capacity')
     .populate('openedBy', 'name')
     .sort({ openedAt: 1 })
     .lean();
@@ -171,7 +173,7 @@ export async function listActiveSessions(req: AuthRequest, res: Response): Promi
 export async function getSession(req: AuthRequest, res: Response): Promise<void> {
   const rid = (req as any).restaurantId;
   const session = await TableSession.findOne({ _id: req.params.id, restaurantId: rid })
-    .populate('tableId', 'label capacity')
+    .populate('tableId', 'label zone capacity')
     .populate('openedBy', 'name')
     .populate('closedBy', 'name')
     .lean();

@@ -150,7 +150,7 @@ export async function activeOrders(req: AuthRequest, res: Response): Promise<voi
     restaurantId: rid,
     status: { $in: ['pending', 'in_progress'] },
   })
-    .populate('tableId', 'label')
+    .populate('tableId', 'label zone')
     .sort({ createdAt: 1 })
     .lean();
   res.json({ success: true, orders });

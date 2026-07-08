@@ -87,11 +87,11 @@ async function seed() {
 
   // Tables for Restaurant A
   const tablesA = await Table.insertMany([
-    { restaurantId: restaurantA._id, label: 'Table 1', capacity: 2, qrToken: crypto.randomBytes(24).toString('hex') },
-    { restaurantId: restaurantA._id, label: 'Table 2', capacity: 4, qrToken: crypto.randomBytes(24).toString('hex') },
-    { restaurantId: restaurantA._id, label: 'Table 3', capacity: 4, qrToken: crypto.randomBytes(24).toString('hex') },
-    { restaurantId: restaurantA._id, label: 'Table 4', capacity: 6, qrToken: crypto.randomBytes(24).toString('hex') },
-    { restaurantId: restaurantA._id, label: 'Patio 1', capacity: 4, qrToken: crypto.randomBytes(24).toString('hex') },
+    { restaurantId: restaurantA._id, label: 'Table 1', zone: 'Ground floor', capacity: 2, qrToken: crypto.randomBytes(24).toString('hex') },
+    { restaurantId: restaurantA._id, label: 'Table 2', zone: 'Ground floor', capacity: 4, qrToken: crypto.randomBytes(24).toString('hex') },
+    { restaurantId: restaurantA._id, label: 'Table 3', zone: 'First floor', capacity: 4, qrToken: crypto.randomBytes(24).toString('hex') },
+    { restaurantId: restaurantA._id, label: 'Table 4', zone: 'First floor', capacity: 6, qrToken: crypto.randomBytes(24).toString('hex') },
+    { restaurantId: restaurantA._id, label: 'Patio 1', zone: 'Ground floor', capacity: 4, qrToken: crypto.randomBytes(24).toString('hex') },
   ]);
   console.log(`Created ${tablesA.length} tables for Golden Fork`);
 

@@ -28,7 +28,16 @@
       "Bash(git commit -q -m 'Payments v1+v1.5: static merchant QR on guest bill + '\\\\''I'\\\\''ve paid'\\\\'' signal *)",
       "Bash(git commit -q -m 'Cashier can dismiss a false '\\\\''I'\\\\''ve paid'\\\\'' claim *)",
       "Bash(node verify-payments-page.js)",
-      "Bash(git commit -q -m 'Cashier Payments workspace: pending claim queue + paid history + live floor bill *)"
+      "Bash(git commit -q -m 'Cashier Payments workspace: pending claim queue + paid history + live floor bill *)",
+      "Bash(git commit -q -m 'Backlog: floors/zones design for next session \\(zone field, unique labels, soft cashier filters\\) *)",
+      "Bash(where winget *)",
+      "Bash(winget --version)",
+      "Bash(where scrcpy *)",
+      "Bash(where adb *)",
+      "Bash(winget install *)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\('Path','Machine'\\) + ';' + [System.Environment]::GetEnvironmentVariable\\('Path','User'\\); scrcpy --version 2>$null | Select-Object -First 3; \\(Get-Command adb -ErrorAction SilentlyContinue\\).Source)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\('Path','Machine'\\) + ';' + [System.Environment]::GetEnvironmentVariable\\('Path','User'\\); scrcpy --stay-awake --always-on-top --window-title \"Waiterless Guest Demo\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5000,3001 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { try { Stop-Process -Id $_ -Force -Confirm:$false } catch {} }; \"ports cleared\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\user\\Desktop\\Projects\\waiterless-restaurant\\apps\\web\\src\\app\\r\\[slug]\\table\\[tableToken]"

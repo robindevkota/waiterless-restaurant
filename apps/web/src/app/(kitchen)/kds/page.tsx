@@ -7,7 +7,7 @@ import { getSocket } from '@/lib/socket';
 type ItemStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled';
 
 interface OrderItem { _id: string; name: string; qty: number; note?: string; status: ItemStatus; }
-interface Order { _id: string; tableId: { label: string }; items: OrderItem[]; status: string; placedAt: string; }
+interface Order { _id: string; tableId: { label: string; zone?: string }; items: OrderItem[]; status: string; placedAt: string; }
 interface Prep {
   forDate: string; weekday: string; basedOnWeeks: number;
   items: { menuItemId: string; name: string; forecastQty: number }[];
@@ -145,7 +145,10 @@ export default function KdsPage() {
         {activeOrders.map((order) => (
           <div key={order._id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <span className="font-bold text-white text-lg">{order.tableId?.label}</span>
+              <span className="font-bold text-white text-lg">
+                {order.tableId?.zone && <span className="text-sm font-medium text-gray-400">{order.tableId.zone} · </span>}
+                {order.tableId?.label}
+              </span>
               <span className="text-xs text-gray-400">{new Date(order.placedAt).toLocaleTimeString()}</span>
             </div>
 

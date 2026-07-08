@@ -22,13 +22,13 @@ interface Overview {
   };
   topItems: { name: string; totalRevenue: number }[];
 }
-interface Session { _id: string; tableId: { label: string }; openedAt: string }
+interface Session { _id: string; tableId: { label: string; zone?: string }; openedAt: string }
 interface ActiveOrder {
   _id: string; createdAt: string;
-  tableId: { label: string } | null;
+  tableId: { label: string; zone?: string } | null;
   items: { name: string; qty: number; status: string }[];
 }
-interface WaiterCall { tableId: string; tableLabel: string; at: string }
+interface WaiterCall { tableId: string; tableLabel: string; zone?: string; at: string }
 
 const POLL_MS = 20_000;
 
@@ -144,7 +144,7 @@ function TvBoard() {
         <div className="rounded-2xl bg-red-600 px-6 py-5 flex items-center gap-4 animate-pulse">
           <BellRing size={34} />
           <p className="text-3xl font-extrabold tracking-tight">
-            {calls.map((c) => c.tableLabel).join(' · ')} {calls.length === 1 ? 'is' : 'are'} calling for a waiter
+            {calls.map((c) => (c.zone ? `${c.zone} ${c.tableLabel}` : c.tableLabel)).join(' · ')} {calls.length === 1 ? 'is' : 'are'} calling for a waiter
           </p>
         </div>
       )}
@@ -177,7 +177,10 @@ function TvBoard() {
           <div className="mt-6 space-y-2.5 overflow-hidden flex-1">
             {sessions.slice(0, 8).map((s) => (
               <div key={s._id} className="flex items-center justify-between text-xl">
-                <span className="font-semibold">{s.tableId?.label}</span>
+                <span className="font-semibold">
+                  {s.tableId?.zone && <span className="text-white/40 font-medium">{s.tableId.zone} · </span>}
+                  {s.tableId?.label}
+                </span>
                 <span className="text-white/40 tabular-nums">open {minsAgo(s.openedAt)}</span>
               </div>
             ))}
@@ -197,7 +200,10 @@ function TvBoard() {
             {orders.slice(0, 7).map((o) => (
               <div key={o._id} className="rounded-xl bg-white/[0.04] px-4 py-3 flex items-center justify-between">
                 <div className="min-w-0">
-                  <p className="text-xl font-semibold">{o.tableId?.label ?? '—'}</p>
+                  <p className="text-xl font-semibold">
+                    {o.tableId?.zone && <span className="text-white/40 font-medium">{o.tableId.zone} · </span>}
+                    {o.tableId?.label ?? '—'}
+                  </p>
                   <p className="text-sm text-white/40 truncate">
                     {o.items.slice(0, 3).map((i) => `${i.qty}× ${i.name}`).join(', ')}{o.items.length > 3 ? ` +${o.items.length - 3}` : ''}
                   </p>

@@ -4,7 +4,7 @@ import { requireOwner, requireCashier } from '../middleware/authorize';
 import { injectRestaurantId } from '../middleware/tenantGuard';
 import { tenantStatusGuard } from '../middleware/tenantStatusGuard';
 import {
-  listTables, createTable, updateTable, deleteTable, getTableQr, regenerateQr,
+  listTables, createTable, bulkCreateTables, updateTable, deleteTable, getTableQr, regenerateQr,
 } from '../controllers/table.controller';
 
 const router = Router();
@@ -14,6 +14,7 @@ const ownerAccess = [authenticate, requireOwner, injectRestaurantId, tenantStatu
 
 router.get('/', ...staffAccess, listTables);
 router.post('/', ...ownerAccess, createTable);
+router.post('/bulk', ...ownerAccess, bulkCreateTables);
 router.patch('/:id', ...ownerAccess, updateTable);
 router.delete('/:id', ...ownerAccess, deleteTable);
 router.get('/:id/qr', ...ownerAccess, getTableQr);

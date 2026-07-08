@@ -1,17 +1,18 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ZoneTabs, useZoneFilter } from '@/components/ZoneTabs';
 import { getSocket } from '@/lib/socket';
 import { BellRing, BadgeCheck } from 'lucide-react';
 
-interface WaiterCall { sessionId: string; tableId: string; tableLabel: string; at: string }
+interface WaiterCall { sessionId: string; tableId: string; tableLabel: string; zone?: string; at: string }
 
-interface Table { _id: string; label: string; capacity: number; status: string; currentSessionId: string | { _id: string } | null; }
+interface Table { _id: string; label: string; zone?: string; capacity: number; status: string; currentSessionId: string | { _id: string } | null; }
 interface Session {
-  _id: string; tableId: { _id: string; label: string }; openedAt: string; guestCount?: number;
+  _id: string; tableId: { _id: string; label: string; zone?: string }; openedAt: string; guestCount?: number;
   paidClaimedAt?: string; paidClaimAmount?: number;
 }
 interface OrderSummary { _id: string; status: string; items: { name: string; qty: number; status: string }[]; }
@@ -59,6 +60,24 @@ export default function FloorPage() {
 
   // Open sessions where the guest tapped "I've paid" — cashier must verify
   const paidClaims = activeSessions.filter((s) => s.paidClaimedAt);
+
+  // Soft zone filter — attention only, never visibility: tab counts always
+  // show every zone's pending work, "All" always shows the combined queue
+  const zones = useMemo(() => Array.from(new Set(tables.map((t) => t.zone).filter(Boolean))) as string[], [tables]);
+  const { zone, pick: pickZone } = useZoneFilter(zones);
+  const zoneOf = useMemo(() => new Map(tables.map((t) => [t._id, t.zone || ''])), [tables]);
+  const callZone = (c: WaiterCall) => c.zone ?? zoneOf.get(c.tableId) ?? '';
+  const claimZone = (s: Session) => s.tableId?.zone ?? zoneOf.get(s.tableId?._id) ?? '';
+  const attentionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of waiterCalls) counts[callZone(c)] = (counts[callZone(c)] ?? 0) + 1;
+    for (const s of paidClaims) counts[claimZone(s)] = (counts[claimZone(s)] ?? 0) + 1;
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waiterCalls, paidClaims, zoneOf]);
+  const visibleTables = zone ? tables.filter((t) => (t.zone || '') === zone) : tables;
+  const visibleClaims = zone ? paidClaims.filter((s) => claimZone(s) === zone) : paidClaims;
+  const visibleCalls = zone ? waiterCalls.filter((c) => callZone(c) === zone) : waiterCalls;
 
   // Keep the open side panel live: a new order on the selected session
   // refreshes its order list + running bill
@@ -149,13 +168,15 @@ export default function FloorPage() {
       <div className="flex-1">
         <h1 className="text-xl font-bold text-gray-900 mb-4">Floor</h1>
 
+        <ZoneTabs zones={zones} zone={zone} onPick={pickZone} counts={attentionCounts} />
+
         {/* Paid-claim alerts — verify in the merchant app, then settle */}
-        {paidClaims.length > 0 && (
+        {visibleClaims.length > 0 && (
           <div className="mb-4 space-y-2">
-            {paidClaims.map((s) => (
+            {visibleClaims.map((s) => (
               <div key={s._id} className="flex items-center justify-between gap-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3">
                 <p className="inline-flex items-center gap-2 text-sm font-semibold text-green-800">
-                  <BadgeCheck size={16} /> {s.tableId.label} claims paid
+                  <BadgeCheck size={16} /> {claimZone(s) ? `${claimZone(s)} · ` : ''}{s.tableId.label} claims paid
                   {typeof s.paidClaimAmount === 'number' && s.paidClaimAmount > 0 && (
                     <span className="font-bold">NPR {s.paidClaimAmount.toLocaleString()}</span>
                   )}
@@ -180,12 +201,12 @@ export default function FloorPage() {
         )}
 
         {/* Waiter call alerts */}
-        {waiterCalls.length > 0 && (
+        {visibleCalls.length > 0 && (
           <div className="mb-4 space-y-2">
-            {waiterCalls.map((call) => (
+            {visibleCalls.map((call) => (
               <div key={call.tableId} className="flex items-center justify-between gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 animate-pulse">
                 <p className="inline-flex items-center gap-2 text-sm font-semibold text-red-800">
-                  <BellRing size={16} /> {call.tableLabel} is calling for a waiter
+                  <BellRing size={16} /> {callZone(call) ? `${callZone(call)} · ` : ''}{call.tableLabel} is calling for a waiter
                   <span className="font-normal text-red-500 text-xs">{new Date(call.at).toLocaleTimeString()}</span>
                 </p>
                 <Button size="sm" onClick={() => attend(call)}>On it</Button>
@@ -194,7 +215,7 @@ export default function FloorPage() {
           </div>
         )}
         <div className="grid grid-cols-3 gap-3">
-          {tables.map((t) => {
+          {visibleTables.map((t) => {
             const session = tableSession(t);
             return (
               <button
@@ -206,7 +227,7 @@ export default function FloorPage() {
                   <p className="font-semibold text-gray-900">{t.label}</p>
                   <Badge label={t.status} color={statusColor(t.status)} />
                 </div>
-                <p className="text-xs text-gray-400">Seats {t.capacity}</p>
+                <p className="text-xs text-gray-400">Seats {t.capacity}{!zone && t.zone ? ` · ${t.zone}` : ''}</p>
                 {session && <p className="text-xs text-orange-600 mt-1">Open since {new Date(session.openedAt).toLocaleTimeString()}</p>}
                 {session?.paidClaimedAt && (
                   <p className="text-xs font-semibold text-green-700 mt-1 inline-flex items-center gap-1">
@@ -222,7 +243,7 @@ export default function FloorPage() {
       {/* Side panel */}
       {selectedTable && (
         <div className="w-80 bg-white border rounded-lg p-5 shrink-0 h-fit">
-          <h2 className="font-bold text-gray-900 mb-1">{selectedTable.label}</h2>
+          <h2 className="font-bold text-gray-900 mb-1">{selectedTable.zone ? `${selectedTable.zone} · ` : ''}{selectedTable.label}</h2>
           <p className="text-sm text-gray-400 mb-4">Seats {selectedTable.capacity}</p>
 
           {!selectedTable.currentSessionId ? (

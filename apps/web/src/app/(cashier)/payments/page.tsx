@@ -5,17 +5,18 @@
  *    oldest claim first — verify in the merchant app, settle or dismiss inline.
  *  - Paid: settled bills, newest first, with today's totals.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { getSocket } from '@/lib/socket';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Pagination } from '@/components/ui/Pagination';
+import { ZoneTabs, useZoneFilter } from '@/components/ZoneTabs';
 import { BadgeCheck, Banknote } from 'lucide-react';
 
 interface Session {
-  _id: string; tableId: { _id: string; label: string }; openedAt: string;
+  _id: string; tableId: { _id: string; label: string; zone?: string }; openedAt: string;
   paidClaimedAt?: string; paidClaimAmount?: number;
 }
 interface PaidBill {
@@ -46,6 +47,26 @@ export default function PaymentsPage() {
   const [methodBySession, setMethodBySession] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [zones, setZones] = useState<string[]>([]);
+  const { zone, pick: pickZone } = useZoneFilter(zones);
+
+  // Zones come from the table list (cashier-readable); the queue alone would
+  // lose the tabs whenever it's empty
+  useEffect(() => {
+    if (authLoading || !accessToken) return;
+    api.get<{ tables: { zone?: string }[] }>('/tables', accessToken)
+      .then((d) => setZones(Array.from(new Set(d.tables.map((t) => t.zone).filter(Boolean))) as string[]))
+      .catch(() => {});
+  }, [authLoading, accessToken]);
+
+  // Soft filter — attention only: tab counts always show every zone's pending claims
+  const claimZone = (s: Session) => s.tableId?.zone ?? '';
+  const pendingCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of pending) counts[claimZone(s)] = (counts[claimZone(s)] ?? 0) + 1;
+    return counts;
+  }, [pending]);
+  const visiblePending = zone ? pending.filter((s) => claimZone(s) === zone) : pending;
 
   const loadPending = useCallback(async () => {
     if (!accessToken) return;
@@ -113,22 +134,29 @@ export default function PaymentsPage() {
 
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3 mb-4">{error}</p>}
 
+      <ZoneTabs zones={zones} zone={zone} onPick={pickZone} counts={pendingCounts} />
+
       <div className="grid lg:grid-cols-2 gap-6 items-start">
       {/* Pending queue */}
       <div className="bg-white border rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b flex items-center gap-2">
           <BadgeCheck size={16} className="text-green-600" />
           <h2 className="font-semibold text-gray-900 text-sm">Pending verification</h2>
-          {pending.length > 0 && <Badge label={String(pending.length)} color="green" />}
+          {visiblePending.length > 0 && <Badge label={String(visiblePending.length)} color="green" />}
         </div>
-        {pending.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-8">No pending payment claims</p>
+        {visiblePending.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">
+            No pending payment claims{zone && pending.length > 0 ? ` in ${zone} — ${pending.length} waiting in other zones` : ''}
+          </p>
         ) : (
           <div className="divide-y">
-            {pending.map((s) => (
+            {visiblePending.map((s) => (
               <div key={s._id} className="px-4 py-3 flex flex-wrap items-center gap-3">
                 <div className="flex-1 min-w-40">
-                  <p className="font-semibold text-gray-900">{s.tableId?.label}</p>
+                  <p className="font-semibold text-gray-900">
+                    {claimZone(s) && <span className="text-gray-400 font-normal">{claimZone(s)} · </span>}
+                    {s.tableId?.label}
+                  </p>
                   <p className="text-xs text-gray-400">
                     claimed {s.paidClaimedAt ? ago(s.paidClaimedAt) : ''}
                     {typeof s.paidClaimAmount === 'number' && s.paidClaimAmount > 0 && (
